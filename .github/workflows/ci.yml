@@ -75,7 +75,7 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-22.04
-    needs: [test-action]
+    needs: [test-action, test-typescript]
     steps:
       - name: Checkout
         id: checkout
@@ -83,13 +83,13 @@ jobs:
 
       - name: Conventional Changelog Update
         uses: TriPSs/conventional-changelog-action@v5
-        id: changelog        
+        id: changelog
         with:
           github-token: ${{ github.token }}
-          output-file: "CHANGELOG.md"
-          skip-version-file: "true"
-          skip-commit: "true"
-          git-push: "true"
+          output-file: 'CHANGELOG.md'
+          skip-version-file: 'true'
+          skip-commit: 'true'
+          git-push: 'true'
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
