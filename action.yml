@@ -1,6 +1,8 @@
 name: Gherking extractor for GitHub Issues
-description: "GitHub Action that processes Gherkin content from issues and turn them into a content that can be then saved into a file"
-author: "Government of British Columbia Natual Resources"
+description:
+  'GitHub Action that processes Gherkin content from issues and turn them into a
+  content that can be then saved into a file'
+author: 'Government of British Columbia Natual Resources'
 branding:
   icon: check-square
   color: blue
@@ -13,10 +15,13 @@ inputs:
 
   ### Typical / recommended
   default_title:
-    description: A default title for the issue, to check if the user has changed it
+    description:
+      A default title for the issue, to check if the user has changed it
     required: true
   update_title:
-    description: Defines if the issue title should be updated in case it is not different from the default one
+    description:
+      Defines if the issue title should be updated in case it is not different
+      from the default one
     required: true
 
   ### Usually a bad idea / not recommended
@@ -33,7 +38,8 @@ inputs:
 # Define your outputs here.
 outputs:
   title:
-    description: The title of the issue. Usually the original title, unless it was updated
+    description:
+      The title of the issue. Usually the original title, unless it was updated
   body:
     description: The original body of the issue
   feature:

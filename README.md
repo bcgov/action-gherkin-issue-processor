@@ -7,14 +7,19 @@
 
 <!-- Reference-Style link -->
 
-[issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
-[pull requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
+[issues]:
+  https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
+[pull requests]:
+  https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
 
 # Gherkin feature extractor from GitHub issues
 
-GitHub Action that processes Gherkin content from issues and turn them into a content that can be then saved into a file.
+GitHub Action that processes Gherkin content from issues and turn them into a
+content that can be then saved into a file.
 
-It reads the issues from a repository and extracts the Gherkin content from them. The Gherkin content is then saved into a file. This expects the issue to contains a Gherkin content in the body of the issue, like the following:
+It reads the issues from a repository and extracts the Gherkin content from
+them. The Gherkin content is then saved into a file. This expects the issue to
+contains a Gherkin content in the body of the issue, like the following:
 
 ```gherkin
 Feature: As a user, I want to be able to login to the system
@@ -25,7 +30,8 @@ Feature: As a user, I want to be able to login to the system
     Then the user is logged in
 ```
 
-The action will extract the Gherkin content from the issue and provide it as a parameter. You can then save as a **feature** file.
+The action will extract the Gherkin content from the issue and provide it as a
+parameter. You can then save as a **feature** file.
 
 # Usage
 
@@ -46,7 +52,8 @@ The action will extract the Gherkin content from the issue and provide it as a p
 
 # Example, Current Repository
 
-Runs when an issue is created. Extracts the Gherkin content from the issue and saves it to a file.
+Runs when an issue is created. Extracts the Gherkin content from the issue and
+saves it to a file.
 
 ```yaml
 on:
@@ -69,7 +76,8 @@ jobs:
 
 # Example, Current Repository but more verbose
 
-Runs when an issue is created. Extracts the Gherkin content from the issue and saves it to a file.
+Runs when an issue is created. Extracts the Gherkin content from the issue and
+saves it to a file.
 
 ```yaml
 on:
