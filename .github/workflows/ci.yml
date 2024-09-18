@@ -1,77 +1,26 @@
-name: Continuous Integration
+name: Pull Request Open
 
 on:
   pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+
+concurrency:
+  # PR open and close use the same group, allowing only one at a time
+  group: ${{ github.event.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  test-typescript:
-    name: TypeScript Tests
+  test:
+    name: Action Test
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    uses: ./.github/workflows/reusable-tests.yml
+
+  results:
+    name: Analysis Results
+    needs: [test]
     runs-on: ubuntu-22.04
-
     steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Check Format
-        id: npm-format-check
-        run: npm run format:check
-
-      - name: Lint
-        id: npm-lint
-        run: npm run lint
-
-      - name: Test
-        id: npm-ci-test
-        run: npm run coverage
-
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Test Local Action
-        id: test-action
-        uses: ./
-        with:
-          issue: 1
-
-      - name: Print Output
-        id: output
-        run: |
-          echo "${{ steps.test-action.outputs.feature }}"
-          echo "${{ steps.test-action.outputs.feature }}" > .github/ci.feature
-
-      - name: Validate Feature
-        id: validate
-        run: |
-          # Check if the content of .github/ci.feature is the same as the .github/sample.feature file and fail if is not
-          diff .github/ci.feature .github/sample.feature
-
-      - name: Upload generated feature on failure
-        if: failure()
-        id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: CI Feature
-          path: .github/ci.feature
+      - run: echo "Workflow completed successfully!"

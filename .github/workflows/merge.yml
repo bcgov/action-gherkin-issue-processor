@@ -9,85 +9,14 @@ permissions:
   contents: read
 
 jobs:
-  test-typescript:
-    name: TypeScript Tests
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Check Format
-        id: npm-format-check
-        run: npm run format:check
-
-      - name: Lint
-        id: npm-lint
-        run: npm run lint
-
-      - name: Test
-        id: npm-ci-test
-        run: npm run coverage
-
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Build
-        id: npm-build
-        run: npm run package
-
-      - name: Test Local Action
-        id: test-action
-        uses: ./
-        with:
-          issue: 1
-
-      - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.feature }}"
-
-      - name: Validate Feature
-        id: validate
-        run: |
-          # Check if the content of the output is the same as the .github/sample.feature file
-          if [ "$(cat .github/sample.feature)" != "${{ steps.test-action.outputs.feature }}" ]; then
-            echo "The output does not match the expected feature"
-            exit 1
-          fi
+  test:
+    name: Action Test
+    uses: ./.github/workflows/reusable-tests.yml
 
   publish:
     name: Publish
     runs-on: ubuntu-22.04
-    needs: [test-action, test-typescript]
+    needs: [test]
     steps:
       - name: Checkout
         id: checkout
