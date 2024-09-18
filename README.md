@@ -2,6 +2,7 @@
 
 [![Issues](https://img.shields.io/github/issues/bcgov-nr/action-gherkin-issue-processor)](/../../issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/bcgov-nr/action-gherkin-issue-processor)](/../../pulls)
+[![Coverage](badges/coverage.svg)](/actions)
 [![Apache 2.0 License](https://img.shields.io/github/license/bcgov-nr/action-gherkin-issue-processor.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
@@ -32,6 +33,35 @@ Feature: As a user, I want to be able to login to the system
 
 The action will extract the Gherkin content from the issue and provide it as a
 parameter. You can then save as a **feature** file.
+
+# Inputs
+
+The only reaquired input is the `issue` number. All the other inputs are
+optional and usually have default values.
+
+- `issue` **(required)**: The github issue number, usually extracted from the
+  event variable `${{ github.event.issue.number }}`
+- `owner`: Target repository owner, default to the current repository owner
+  `${{ github.repository_owner }}`
+- `repo`: Target repository name including the owner, default to the current
+  repository `${{ github.repository }}`
+- `token`: GitHub token required to access the github api, default to
+  `${{ github.token }}`
+- `default_title`: Default title of the issue that should be replaced. This is
+  to prevent duplicate naming of the issue
+- `update_title`: Used in conjunction with `default_title` to update the title
+  of the issue if it matches the `default_title`. It will replace the original
+  title with
+  `Automated test case #{issue number} opened by {user who opened the issue or 'unknown'}`
+
+# Outputs
+
+- `title`: The title of the issue. It can be the original one or the updated
+- `sanitized_title`: The title of the issue in a clean and sanitized format that
+  can be used as a file name
+- `body`: The original body of the issue
+- `feature`: The Gherkin content extracted from the issue. It is provided as an
+  output so it can be saved into a file
 
 # Usage
 

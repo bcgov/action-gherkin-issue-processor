@@ -41,7 +41,6 @@ describe('run function', () => {
       if (key === 'owner') return 'octocat'
       if (key === 'repo') return 'octocat/example-repo'
       if (key === 'issue') return '1'
-      if (key === 'update_title') return 'true'
       return undefined
     })
 
@@ -58,6 +57,7 @@ describe('run function', () => {
 
     expect(mockIssuesGet).toHaveBeenCalledOnce()
     expect(mockSetOutput).toHaveBeenCalledWith('title', 'Test Title')
+    expect(mockSetOutput).toHaveBeenCalledWith('sanitized_title', 'Test_Title')
     expect(mockSetOutput).toHaveBeenCalledWith(
       'body',
       '```gherkin\nFeature: Test Gherkin Content\n```'
@@ -346,7 +346,6 @@ describe('run function', () => {
       if (key === 'repo') return 'octocat/example-repo'
       if (key === 'issue') return '1'
       if (key === 'default_title') return 'Test Title'
-      if (key === 'update_title') return 'true'
       return undefined
     })
     mockGetBooleanInput.mockImplementation(key => {
@@ -385,6 +384,10 @@ describe('run function', () => {
       'Automated test case #1 opened by octocat'
     )
     expect(mockSetOutput).toHaveBeenCalledWith(
+      'sanitized_title',
+      'Automated_test_case__1_opened_by_octocat'
+    )
+    expect(mockSetOutput).toHaveBeenCalledWith(
       'body',
       '```gherkin\nFeature: Test Gherkin Content\n```'
     )
@@ -406,7 +409,6 @@ describe('run function', () => {
       if (key === 'repo') return 'octocat/example-repo'
       if (key === 'issue') return '1'
       if (key === 'default_title') return 'Test Title'
-      if (key === 'update_title') return 'true'
       return undefined
     })
     mockGetBooleanInput.mockImplementation(key => {
@@ -441,6 +443,10 @@ describe('run function', () => {
     expect(mockSetOutput).toHaveBeenCalledWith(
       'title',
       'Automated test case #1 opened by unknown'
+    )
+    expect(mockSetOutput).toHaveBeenCalledWith(
+      'sanitized_title',
+      'Automated_test_case__1_opened_by_unknown'
     )
     expect(mockSetOutput).toHaveBeenCalledWith(
       'body',
@@ -491,6 +497,10 @@ describe('run function', () => {
     expect(mockSetOutput).toHaveBeenCalledWith(
       'title',
       'Automated test case #1 opened by unknown'
+    )
+    expect(mockSetOutput).toHaveBeenCalledWith(
+      'sanitized_title',
+      'Automated_test_case__1_opened_by_unknown'
     )
     expect(mockSetOutput).toHaveBeenCalledWith(
       'body',
