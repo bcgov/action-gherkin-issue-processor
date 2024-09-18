@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov-nr/action-gherkin-issue-processor.yml@main
+        uses: bcgov-nr/action-gherkin-issue-processor@main
         with:
           issue: ${{ github.event.issue.number }}
       - name: Save feature content
@@ -121,7 +121,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov-nr/action-gherkin-issue-processor.yml@main
+        uses: bcgov-nr/action-gherkin-issue-processor@main
         with:
           issue: ${{ github.event.issue.number }}
           owner: ${{ github.repository_owner }}
