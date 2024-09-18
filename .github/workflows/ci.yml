@@ -62,6 +62,13 @@ jobs:
           echo "${{ steps.test-action.outputs.feature }}"
           echo "${{ steps.test-action.outputs.feature }}" > .github/ci.feature
 
+      - name: Upload generated feature
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: CI Feature
+          path: .github/ci.feature
+
       - name: Validate Feature
         id: validate
         run: |
