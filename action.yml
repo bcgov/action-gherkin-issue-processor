@@ -21,6 +21,7 @@ inputs:
     description:
       Defines if the issue title should be updated in case it is not different
       from the default one
+    default: 'false'
 
   ### Usually a bad idea / not recommended
   token:
