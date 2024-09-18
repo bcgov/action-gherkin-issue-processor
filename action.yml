@@ -17,12 +17,11 @@ inputs:
   default_title:
     description:
       A default title for the issue, to check if the user has changed it
-    required: true
   update_title:
     description:
       Defines if the issue title should be updated in case it is not different
       from the default one
-    required: true
+    default: 'false'
 
   ### Usually a bad idea / not recommended
   token:
@@ -40,6 +39,10 @@ outputs:
   title:
     description:
       The title of the issue. Usually the original title, unless it was updated
+  sanitized_title:
+    description:
+      The title of the issue in a clean and sanitized format that can be used as
+      a file name
   body:
     description: The original body of the issue
   feature:
