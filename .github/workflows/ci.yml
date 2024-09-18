@@ -58,13 +58,12 @@ jobs:
 
       - name: Print Output
         id: output
-        run: echo "${{ steps.test-action.outputs.feature }}"
+        run: |
+          echo "${{ steps.test-action.outputs.feature }}"
+          echo "${{ steps.test-action.outputs.feature }}" > .github/ci.feature
 
       - name: Validate Feature
         id: validate
         run: |
-          # Check if the content of the output is the same as the .github/sample.feature file
-          if [ "$(cat .github/sample.feature)" != "${{ steps.test-action.outputs.feature }}" ]; then
-            echo "The output does not match the expected feature"
-            exit 1
-          fi
+          # Check if the content of .github/ci.feature is the same as the .github/sample.feature file and fail if is not
+          diff .github/ci.feature .github/sample.feature
