@@ -62,15 +62,16 @@ jobs:
           echo "${{ steps.test-action.outputs.feature }}"
           echo "${{ steps.test-action.outputs.feature }}" > .github/ci.feature
 
-      - name: Upload generated feature
-        id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: CI Feature
-          path: .github/ci.feature
-
       - name: Validate Feature
         id: validate
         run: |
           # Check if the content of .github/ci.feature is the same as the .github/sample.feature file and fail if is not
           diff .github/ci.feature .github/sample.feature
+
+      - name: Upload generated feature on failure
+        if: failure()
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: CI Feature
+          path: .github/ci.feature
