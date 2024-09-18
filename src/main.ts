@@ -91,6 +91,10 @@ export async function run(): Promise<void> {
       core.setFailed('Error: No Gherkin content found in the issue body.')
     } else {
       core.setOutput('title', updatedTitle)
+      core.setOutput(
+        'sanitized_title',
+        updatedTitle.replace(/[^a-zA-Z0-9]/g, '_')
+      )
       core.setOutput('body', issue.body)
       core.setOutput('feature', gherkinText.trim())
 
