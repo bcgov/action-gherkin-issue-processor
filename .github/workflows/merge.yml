@@ -1,22 +1,39 @@
-name: Continuous Integration
+name: Test and Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths-ignore:
+      - '.github/sample.feature'
+      - '**.md'
+      - 'badges/**'
+      - '.eslintignore'
+      - '.github/linters/**'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.prettier*'
+      - 'renovate.json'
+  workflow_dispatch:
 
-permissions:
-  contents: read
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 jobs:
   test:
     name: Action Test
+    permissions:
+      contents: read
     uses: ./.github/workflows/reusable-tests.yml
 
   publish:
     name: Publish
     runs-on: ubuntu-22.04
     needs: [test]
+    permissions:
+      contents: write
+      actions: write
+      attestations: write
     steps:
       - name: Checkout
         id: checkout
