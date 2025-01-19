@@ -93,7 +93,7 @@ on:
 jobs:
   feature:
     name: Extract feature content
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Extract feature content
         id: feature
@@ -117,7 +117,7 @@ on:
 jobs:
   feature:
     name: Extract feature content
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Extract feature content
         id: feature
