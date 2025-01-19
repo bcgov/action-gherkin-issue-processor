@@ -1,9 +1,9 @@
 <!-- Badges -->
 
-[![Issues](https://img.shields.io/github/issues/bcgov-nr/action-gherkin-issue-processor)](/../../issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov-nr/action-gherkin-issue-processor)](/../../pulls)
+[![Issues](https://img.shields.io/github/issues/bcgov/action-gherkin-issue-processor)](/../../issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov/action-gherkin-issue-processor)](/../../pulls)
 [![Coverage](badges/coverage.svg)](/actions)
-[![Apache 2.0 License](https://img.shields.io/github/license/bcgov-nr/action-gherkin-issue-processor.svg)](/LICENSE)
+[![Apache 2.0 License](https://img.shields.io/github/license/bcgov/action-gherkin-issue-processor.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
 <!-- Reference-Style link -->
@@ -66,7 +66,7 @@ optional and usually have default values.
 # Usage
 
 ```yaml
-- uses: bcgov-nr/action-gherkin-issue-processor@main
+- uses: bcgov/action-gherkin-issue-processor@main
   with:
     ### Required
 
@@ -77,7 +77,7 @@ optional and usually have default values.
     owner: bcgov-nr
 
     # Target repository name
-    repo: bcgov-nr/action-gherkin-issue-processor
+    repo: bcgov/action-gherkin-issue-processor
 ```
 
 # Example, Current Repository
@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov-nr/action-gherkin-issue-processor@main
+        uses: bcgov/action-gherkin-issue-processor@main
         with:
           issue: ${{ github.event.issue.number }}
       - name: Save feature content
@@ -121,7 +121,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov-nr/action-gherkin-issue-processor@main
+        uses: bcgov/action-gherkin-issue-processor@main
         with:
           issue: ${{ github.event.issue.number }}
           owner: ${{ github.repository_owner }}

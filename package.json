@@ -4,13 +4,13 @@
   "version": "0.0.1",
   "author": "Government of British Columbia Natual Resources",
   "private": false,
-  "homepage": "https://github.com/bcgov-nr/action-gherkin-issue-processor",
+  "homepage": "https://github.com/bcgov/action-gherkin-issue-processor",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bcgov-nr/action-gherkin-issue-processor.git"
+    "url": "git+https://github.com/bcgov/action-gherkin-issue-processor.git"
   },
   "bugs": {
-    "url": "https://github.com/bcgov-nr/action-gherkin-issue-processor/issues"
+    "url": "https://github.com/bcgov/action-gherkin-issue-processor/issues"
   },
   "keywords": [
     "actions",
