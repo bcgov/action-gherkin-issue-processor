@@ -9,7 +9,7 @@ concurrency:
   group: ${{ github.event.number }}
   cancel-in-progress: true
 
-permissions: {}
+# permissions: {}
 
 jobs:
   test:
