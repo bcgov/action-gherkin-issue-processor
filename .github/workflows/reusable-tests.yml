@@ -3,7 +3,7 @@ name: Analysis
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: main
   workflow_dispatch:
 
 permissions:
@@ -43,6 +43,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Test Local Action
+        id: test-action
         uses: ./
         with:
           issue: 1
