@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   test:
@@ -21,6 +22,8 @@ jobs:
   results:
     name: Analysis Results
     needs: [test]
+    permissions:
+      security-events: write
     runs-on: ubuntu-24.04
     steps:
       - run: echo "Workflow completed successfully!"
