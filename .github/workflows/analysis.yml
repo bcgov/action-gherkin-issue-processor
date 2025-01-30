@@ -1,0 +1,140 @@
+name: Analysis
+
+on:
+  pull_request:
+  push:
+    branches: main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  check-dist:
+    name: Check dist/
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build dist/ Directory
+        run: npm run bundle
+
+      # This will fail the workflow if the `dist/` directory is different than expected
+      - name: Compare Directories
+        run: |
+          if [ ! -d dist/ ]; then
+            echo "Expected dist/ directory does not exist.  See status below:"
+            ls -la ./
+            exit 1
+          fi
+          if [ "$(git diff --ignore-space-at-eol --text dist/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff --ignore-space-at-eol --text dist/
+            exit 1
+          fi
+
+      # If `dist/` was different than expected, upload the expected version as a workflow artifact
+      - if: failure() && steps.diff.outcome == 'failure'
+        name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  test-action:
+    name: GitHub Actions Test
+    if: (! github.event.pull_request.draft)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Local Action
+        id: test-action
+        uses: ./
+        with:
+          issue: 1
+
+      - name: Print Output
+        run: |
+          echo "${{ steps.test-action.outputs.feature }}"
+          echo "${{ steps.test-action.outputs.feature }}" > .github/ci.feature
+
+      - name: Validate Feature
+        run: |
+          # Check if the content of .github/ci.feature is the same as the .github/sample.feature file and fail if is not
+          diff .github/ci.feature .github/sample.feature
+
+      - name: Upload generated feature on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CI Feature
+          path: .github/ci.feature
+
+  test-typescript:
+    name: TypeScript Tests
+    if: (! github.event.pull_request.draft)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Format
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run coverage
+
+  # https://github.com/marketplace/actions/aqua-security-trivy
+  trivy:
+    name: Trivy Security Scan
+    if: (! github.event.pull_request.draft)
+    permissions:
+      security-events: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: true
+          scan-type: 'fs'
+          scanners: 'vuln,secret,config'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  results:
+    name: Analysis Results
+    needs: [check-dist, test-action, test-typescript, trivy]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - if:
+          contains(needs.*.result, 'failure')||contains(needs.*.result,
+          'canceled')
+        run: echo "At least one job has failed." && exit 1
+      - run: echo "Success!"

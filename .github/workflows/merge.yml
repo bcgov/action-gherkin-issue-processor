@@ -20,12 +20,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Action Test
-    permissions:
-      contents: read
-    uses: ./.github/workflows/reusable-tests.yml
-
   publish:
     name: Publish
     runs-on: ubuntu-24.04
