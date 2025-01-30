@@ -1,7 +1,10 @@
-name: Reusable Tests
+name: Analysis
 
 on:
-  workflow_call:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,8 +13,8 @@ permissions:
 jobs:
   test-typescript:
     name: TypeScript Tests
+    if: (! github.event.pull_request.draft)
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout
         id: checkout
@@ -42,8 +45,8 @@ jobs:
 
   test-action:
     name: GitHub Actions Test
+    if: (! github.event.pull_request.draft)
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout
         id: checkout

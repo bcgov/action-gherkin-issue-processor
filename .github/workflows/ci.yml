@@ -14,11 +14,6 @@ permissions:
   security-events: write
 
 jobs:
-  test:
-    name: Action Test
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    uses: ./.github/workflows/reusable-tests.yml
-
   results:
     name: Analysis Results
     needs: [test]
