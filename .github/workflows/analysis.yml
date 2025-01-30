@@ -49,29 +49,6 @@ jobs:
           name: dist
           path: dist/
 
-  test-typescript:
-    name: TypeScript Tests
-    if: (! github.event.pull_request.draft)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Check Format
-        run: npm run format:check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm run coverage
-
   test-action:
     name: GitHub Actions Test
     if: (! github.event.pull_request.draft)
@@ -102,6 +79,29 @@ jobs:
           name: CI Feature
           path: .github/ci.feature
 
+  test-typescript:
+    name: TypeScript Tests
+    if: (! github.event.pull_request.draft)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Format
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run coverage
+
   # https://github.com/marketplace/actions/aqua-security-trivy
   trivy:
     name: Trivy Security Scan
@@ -126,3 +126,13 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
+
+  results:
+    name: Analysis Results
+    needs: [check-dist, test-action, test-typescripe, trivy]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
+        run: echo "At least one job has failed." && exit 1
+      - run: echo "Success!"
