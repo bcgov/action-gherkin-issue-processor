@@ -129,7 +129,7 @@ jobs:
 
   results:
     name: Analysis Results
-    needs: [check-dist, test-action, test-typescripe, trivy]
+    needs: [check-dist, test-action, test-typescript, trivy]
     if: always()
     runs-on: ubuntu-24.04
     steps:
