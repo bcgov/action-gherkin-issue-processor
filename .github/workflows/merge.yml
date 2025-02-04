@@ -48,6 +48,7 @@ jobs:
       - name: Rebuild ./dist
         if: steps.semver.outputs.next
         run: |
+          npm ci
           npm run bundle
           git add ./dist --force
           git commit -m "Rebuild dist/ directory"
