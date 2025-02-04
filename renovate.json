@@ -1,6 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "autoApprove": true,
   "pinDigest": {
     "groupName": "Pin Dependencies",
     "groupSlug": "pin-dependencies",
