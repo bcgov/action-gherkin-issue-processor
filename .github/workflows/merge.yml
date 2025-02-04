@@ -22,6 +22,8 @@ concurrency:
 jobs:
   publish:
     name: Publish
+    env:
+      branch: temp-${{ github.run_number }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
