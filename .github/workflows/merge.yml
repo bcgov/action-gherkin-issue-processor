@@ -30,7 +30,7 @@ jobs:
       actions: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Get Semver
         id: semver
         continue-on-error: true
