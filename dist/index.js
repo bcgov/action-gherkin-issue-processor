@@ -28449,6 +28449,9 @@ __webpack_unused_export__ = defaultContentType
 /******/ }
 /******/ 
 /************************************************************************/
+/******/ /* webpack/runtime/asset-relocator-loader */
+/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = decodeURIComponent(new URL('.', import.meta.url).pathname).slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
 /******/ /* webpack/runtime/define property getters */
 /******/ (() => {
 /******/ 	// define getter functions for harmony exports
@@ -28476,10 +28479,6 @@ __webpack_unused_export__ = defaultContentType
 /******/ 		Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 	};
 /******/ })();
-/******/ 
-/******/ /* webpack/runtime/compat */
-/******/ 
-/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
 /******/ 
 /************************************************************************/
 var __webpack_exports__ = {};
@@ -28511,6 +28510,7 @@ var common_utils_namespaceObject = {};
 __nccwpck_require__.r(common_utils_namespaceObject);
 __nccwpck_require__.d(common_utils_namespaceObject, {
   arrayReplaceAt: () => (arrayReplaceAt),
+  asciiTrim: () => (asciiTrim),
   assign: () => (utils_assign),
   escapeHtml: () => (escapeHtml),
   escapeRE: () => (escapeRE),
@@ -28518,6 +28518,7 @@ __nccwpck_require__.d(common_utils_namespaceObject, {
   has: () => (has),
   isMdAsciiPunct: () => (isMdAsciiPunct),
   isPunctChar: () => (isPunctChar),
+  isPunctCharCode: () => (isPunctCharCode),
   isSpace: () => (isSpace),
   isString: () => (isString),
   isValidEntityCode: () => (isValidEntityCode),
@@ -36957,7 +36958,6 @@ function arrayReplaceAt (src, pos, newElements) {
 }
 
 function isValidEntityCode (c) {
-  /* eslint no-bitwise:0 */
   // broken sequence
   if (c >= 0xD800 && c <= 0xDFFF) { return false }
   // never used
@@ -36985,8 +36985,8 @@ function utils_fromCodePoint (c) {
   return String.fromCharCode(c)
 }
 
-const UNESCAPE_MD_RE  = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g
-const ENTITY_RE       = /&([a-z#][a-z0-9]{1,31});/gi
+const UNESCAPE_MD_RE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g
+const ENTITY_RE = /&([a-z#][a-z0-9]{1,31});/gi
 const UNESCAPE_ALL_RE = new RegExp(UNESCAPE_MD_RE.source + '|' + ENTITY_RE.source, 'gi')
 
 const DIGITAL_ENTITY_TEST_RE = /^#((?:x[a-f0-9]{1,8}|[0-9]{1,8}))$/i
@@ -37011,12 +37011,6 @@ function replaceEntityPattern (match, name) {
 
   return match
 }
-
-/* function replaceEntities(str) {
-  if (str.indexOf('&') < 0) { return str; }
-
-  return str.replace(ENTITY_RE, replaceEntityPattern);
-} */
 
 function unescapeMd (str) {
   if (str.indexOf('\\') < 0) { return str }
@@ -37087,11 +37081,13 @@ function isWhiteSpace (code) {
   return false
 }
 
-/* eslint-disable max-len */
-
 // Currently without astral characters support.
 function isPunctChar (ch) {
   return regex.test(ch) || S_regex.test(ch)
+}
+
+function isPunctCharCode (code) {
+  return isPunctChar(utils_fromCodePoint(code))
 }
 
 // Markdown ASCII punctuation characters.
@@ -37155,6 +37151,7 @@ function normalizeReference (str) {
   // (remove this when node v10 is no longer supported).
   //
   if ('ẞ'.toLowerCase() === 'Ṿ') {
+    /* c8 ignore next 2 */
     str = str.replace(/ẞ/g, 'ß')
   }
 
@@ -37191,6 +37188,28 @@ function normalizeReference (str) {
   // most notably, `__proto__`)
   //
   return str.toLowerCase().toUpperCase()
+}
+
+function isAsciiTrimmable (c) {
+  return c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d
+}
+
+// "Light" .trim() for blocks (headers, paragraphs), where unicode spaces
+// should be preserved.
+function asciiTrim (str) {
+  let start = 0
+  for (; start < str.length; start++) {
+    if (!isAsciiTrimmable(str.charCodeAt(start))) {
+      break
+    }
+  }
+  let end = str.length - 1
+  for (; end >= start; end--) {
+    if (!isAsciiTrimmable(str.charCodeAt(end))) {
+      break
+    }
+  }
+  return str.slice(start, end + 1)
 }
 
 // Re-export libraries commonly used in both markdown-it and its plugins,
@@ -37304,7 +37323,7 @@ function parseLinkDestination (str, start, max) {
     if (code < 0x20 || code === 0x7F) { break }
 
     if (code === 0x5C /* \ */ && pos + 1 < max) {
-      if (str.charCodeAt(pos + 1) === 0x20) { break }
+      if (str.charCodeAt(pos + 1) === 0x20) { pos++; continue }
       pos += 2
       continue
     }
@@ -37424,7 +37443,7 @@ const default_rules = {}
 default_rules.code_inline = function (tokens, idx, options, env, slf) {
   const token = tokens[idx]
 
-  return  '<code' + slf.renderAttrs(token) + '>' +
+  return '<code' + slf.renderAttrs(token) + '>' +
           escapeHtml(token.content) +
           '</code>'
 }
@@ -37432,7 +37451,7 @@ default_rules.code_inline = function (tokens, idx, options, env, slf) {
 default_rules.code_block = function (tokens, idx, options, env, slf) {
   const token = tokens[idx]
 
-  return  '<pre' + slf.renderAttrs(token) + '><code>' +
+  return '<pre' + slf.renderAttrs(token) + '><code>' +
           escapeHtml(tokens[idx].content) +
           '</code></pre>\n'
 }
@@ -38092,28 +38111,28 @@ function Token (type, tag, nesting) {
    *
    * Type of the token (string, e.g. "paragraph_open")
    **/
-  this.type     = type
+  this.type = type
 
   /**
    * Token#tag -> String
    *
    * html tag name, e.g. "p"
    **/
-  this.tag      = tag
+  this.tag = tag
 
   /**
    * Token#attrs -> Array
    *
    * Html attributes. Format: `[ [ name1, value1 ], [ name2, value2 ] ]`
    **/
-  this.attrs    = null
+  this.attrs = null
 
   /**
    * Token#map -> Array
    *
    * Source map info. Format: `[ line_begin, line_end ]`
    **/
-  this.map      = null
+  this.map = null
 
   /**
    * Token#nesting -> Number
@@ -38124,14 +38143,14 @@ function Token (type, tag, nesting) {
    * -  `0` means the tag is self-closing
    * - `-1` means the tag is closing
    **/
-  this.nesting  = nesting
+  this.nesting = nesting
 
   /**
    * Token#level -> Number
    *
    * nesting level, the same as `state.level`
    **/
-  this.level    = 0
+  this.level = 0
 
   /**
    * Token#children -> Array
@@ -38146,14 +38165,14 @@ function Token (type, tag, nesting) {
    * In a case of self-closing tag (code, html, fence, etc.),
    * it has contents of this tag.
    **/
-  this.content  = ''
+  this.content = ''
 
   /**
    * Token#markup -> String
    *
    * '*' or '_' for emphasis, fence string for fence, etc.
    **/
-  this.markup   = ''
+  this.markup = ''
 
   /**
    * Token#info -> String
@@ -38164,14 +38183,14 @@ function Token (type, tag, nesting) {
    * - The value "auto" for autolink "link_open" and "link_close" tokens
    * - The string value of the item marker for ordered-list "list_item_open" tokens
    **/
-  this.info     = ''
+  this.info = ''
 
   /**
    * Token#meta -> Object
    *
    * A place for plugins to store an arbitrary data
    **/
-  this.meta     = null
+  this.meta = null
 
   /**
    * Token#block -> Boolean
@@ -38179,7 +38198,7 @@ function Token (type, tag, nesting) {
    * True for block-level tokens, false for inline tokens.
    * Used in renderer to calculate line breaks
    **/
-  this.block    = false
+  this.block = false
 
   /**
    * Token#hidden -> Boolean
@@ -38187,7 +38206,7 @@ function Token (type, tag, nesting) {
    * If it's true, ignore this element when rendering. Used for tight lists
    * to hide paragraphs.
    **/
-  this.hidden   = false
+  this.hidden = false
 }
 
 /**
@@ -38290,8 +38309,8 @@ StateCore.prototype.Token = lib_token
 // Normalize input string
 
 // https://spec.commonmark.org/0.29/#line-ending
-const NEWLINES_RE  = /\r\n?|\n/g
-const NULL_RE      = /\0/g
+const NEWLINES_RE = /\r\n?|\n/g
+const NULL_RE = /\0/g
 
 function normalize (state) {
   let str
@@ -38310,9 +38329,9 @@ function block (state) {
   let token
 
   if (state.inlineMode) {
-    token          = new state.Token('inline', '', 0)
-    token.content  = state.src
-    token.map      = [0, 1]
+    token = new state.Token('inline', '', 0)
+    token.content = state.src
+    token.map = [0, 1]
     token.children = []
     state.tokens.push(token)
   } else {
@@ -38339,8 +38358,6 @@ function inline (state) {
 // Currently restricted by `md.validateLink()` to http/https/ftp
 //
 
-
-
 function isLinkOpen (str) {
   return /^<a[>\s]/i.test(str)
 }
@@ -38359,7 +38376,8 @@ function linkify (state) {
       continue
     }
 
-    let tokens = blockTokens[j].children
+    const tokens = blockTokens[j].children
+    const replacements = []
 
     let htmlLinkLevel = 0
 
@@ -38429,42 +38447,69 @@ function linkify (state) {
           const pos = links[ln].index
 
           if (pos > lastPos) {
-            const token   = new state.Token('text', '', 0)
+            const token = new state.Token('text', '', 0)
             token.content = text.slice(lastPos, pos)
-            token.level   = level
+            token.level = level
             nodes.push(token)
           }
 
-          const token_o   = new state.Token('link_open', 'a', 1)
-          token_o.attrs   = [['href', fullUrl]]
-          token_o.level   = level++
-          token_o.markup  = 'linkify'
-          token_o.info    = 'auto'
+          const token_o = new state.Token('link_open', 'a', 1)
+          token_o.attrs = [['href', fullUrl]]
+          token_o.level = level++
+          token_o.markup = 'linkify'
+          token_o.info = 'auto'
           nodes.push(token_o)
 
-          const token_t   = new state.Token('text', '', 0)
+          const token_t = new state.Token('text', '', 0)
           token_t.content = urlText
-          token_t.level   = level
+          token_t.level = level
           nodes.push(token_t)
 
-          const token_c   = new state.Token('link_close', 'a', -1)
-          token_c.level   = --level
-          token_c.markup  = 'linkify'
-          token_c.info    = 'auto'
+          const token_c = new state.Token('link_close', 'a', -1)
+          token_c.level = --level
+          token_c.markup = 'linkify'
+          token_c.info = 'auto'
           nodes.push(token_c)
 
           lastPos = links[ln].lastIndex
         }
         if (lastPos < text.length) {
-          const token   = new state.Token('text', '', 0)
+          const token = new state.Token('text', '', 0)
           token.content = text.slice(lastPos)
-          token.level   = level
+          token.level = level
           nodes.push(token)
         }
 
-        // replace current node
-        blockTokens[j].children = tokens = arrayReplaceAt(tokens, i, nodes)
+        replacements.push({ index: i, nodes })
       }
+    }
+
+    if (replacements.length > 0) {
+      let newTokensLength = tokens.length
+      for (const replacement of replacements) {
+        newTokensLength += replacement.nodes.length - 1
+      }
+
+      const newTokens = new Array(newTokensLength)
+      let replacementIndex = 0
+      let newTokenIndex = 0
+
+      replacements.reverse()
+
+      for (let i = 0; i < tokens.length; i++) {
+        const replacement = replacements[replacementIndex]
+
+        if (replacement?.index === i) {
+          for (const node of replacement.nodes) {
+            newTokens[newTokenIndex++] = node
+          }
+          replacementIndex++
+        } else {
+          newTokens[newTokenIndex++] = tokens[i]
+        }
+      }
+
+      blockTokens[j].children = newTokens
     }
   }
 }
@@ -38582,14 +38627,36 @@ const QUOTE_TEST_RE = /['"]/
 const QUOTE_RE = /['"]/g
 const APOSTROPHE = '\u2019' /* ’ */
 
-function replaceAt (str, index, ch) {
-  return str.slice(0, index) + ch + str.slice(index + 1)
+function addReplacement (replacements, tokenIdx, pos, ch) {
+  if (!replacements[tokenIdx]) {
+    replacements[tokenIdx] = []
+  }
+
+  replacements[tokenIdx].push({ pos, ch })
+}
+
+function applyReplacements (str, replacements) {
+  let result = ''
+  let lastPos = 0
+
+  replacements.sort((a, b) => a.pos - b.pos)
+
+  for (let i = 0; i < replacements.length; i++) {
+    const replacement = replacements[i]
+
+    result += str.slice(lastPos, replacement.pos) + replacement.ch
+    lastPos = replacement.pos + 1
+  }
+
+  return result + str.slice(lastPos)
 }
 
 function process_inlines (tokens, state) {
   let j
 
   const stack = []
+  // token index -> list of replacements in the original token content
+  const replacements = {}
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]
@@ -38603,9 +38670,9 @@ function process_inlines (tokens, state) {
 
     if (token.type !== 'text') { continue }
 
-    let text = token.content
+    const text = token.content
     let pos = 0
-    let max = text.length
+    const max = text.length
 
     /* eslint no-labels:0,block-scoped-var:0 */
     OUTER:
@@ -38653,8 +38720,8 @@ function process_inlines (tokens, state) {
         }
       }
 
-      const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctChar(String.fromCharCode(lastChar))
-      const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctChar(String.fromCharCode(nextChar))
+      const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctCharCode(lastChar)
+      const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctCharCode(nextChar)
 
       const isLastWhiteSpace = isWhiteSpace(lastChar)
       const isNextWhiteSpace = isWhiteSpace(nextChar)
@@ -38697,7 +38764,7 @@ function process_inlines (tokens, state) {
       if (!canOpen && !canClose) {
         // middle of word
         if (isSingle) {
-          token.content = replaceAt(token.content, t.index, APOSTROPHE)
+          addReplacement(replacements, i, t.index, APOSTROPHE)
         }
         continue
       }
@@ -38720,18 +38787,8 @@ function process_inlines (tokens, state) {
               closeQuote = state.md.options.quotes[1]
             }
 
-            // replace token.content *before* tokens[item.token].content,
-            // because, if they are pointing at the same token, replaceAt
-            // could mess up indices when quote length != 1
-            token.content = replaceAt(token.content, t.index, closeQuote)
-            tokens[item.token].content = replaceAt(
-              tokens[item.token].content, item.pos, openQuote)
-
-            pos += closeQuote.length - 1
-            if (item.token === i) { pos += openQuote.length - 1 }
-
-            text = token.content
-            max = text.length
+            addReplacement(replacements, i, t.index, closeQuote)
+            addReplacement(replacements, item.token, item.pos, openQuote)
 
             stack.length = j
             continue OUTER
@@ -38747,10 +38804,14 @@ function process_inlines (tokens, state) {
           level: thisLevel
         })
       } else if (canClose && isSingle) {
-        token.content = replaceAt(token.content, t.index, APOSTROPHE)
+        addReplacement(replacements, i, t.index, APOSTROPHE)
       }
     }
   }
+
+  Object.keys(replacements).forEach(function (tokenIdx) {
+    tokens[tokenIdx].content = applyReplacements(tokens[tokenIdx].content, replacements[tokenIdx])
+  })
 }
 
 function smartquotes (state) {
@@ -38832,15 +38893,15 @@ function text_join (state) {
 
 
 const _rules = [
-  ['normalize',      normalize],
-  ['block',          block],
-  ['inline',         inline],
-  ['linkify',        linkify],
-  ['replacements',   replace],
-  ['smartquotes',    smartquotes],
+  ['normalize', normalize],
+  ['block', block],
+  ['inline', inline],
+  ['linkify', linkify],
+  ['replacements', replace],
+  ['smartquotes', smartquotes],
   // `text_join` finds `text_special` tokens (for escape sequences)
   // and joins them with the rest of the text
-  ['text_join',      text_join]
+  ['text_join', text_join]
 ]
 
 /**
@@ -38886,7 +38947,7 @@ function StateBlock (src, md, env, tokens) {
   this.src = src
 
   // link to parser instance
-  this.md     = md
+  this.md = md
 
   this.env = env
 
@@ -38917,11 +38978,11 @@ function StateBlock (src, md, env, tokens) {
 
   // required block content indent (for example, if we are
   // inside a list, it would be positioned after list marker)
-  this.blkIndent  = 0
-  this.line       = 0 // line index in src
-  this.lineMax    = 0 // lines count
-  this.tight      = false  // loose/tight mode for lists
-  this.ddIndent   = -1 // indent of the current dd block (-1 if there isn't any)
+  this.blkIndent = 0
+  this.line = 0 // line index in src
+  this.lineMax = 0 // lines count
+  this.tight = false  // loose/tight mode for lists
+  this.ddIndent = -1 // indent of the current dd block (-1 if there isn't any)
   this.listIndent = -1 // indent of the current list block (-1 if there isn't any)
 
   // can be 'blockquote', 'list', 'root', 'paragraph' or 'reference'
@@ -39252,11 +39313,11 @@ function table (state, startLine, endLine, silent) {
   for (let i = 0; i < columns.length; i++) {
     const token_ho = state.push('th_open', 'th', 1)
     if (aligns[i]) {
-      token_ho.attrs  = [['style', 'text-align:' + aligns[i]]]
+      token_ho.attrs = [['style', 'text-align:' + aligns[i]]]
     }
 
     const token_il = state.push('inline', '', 0)
-    token_il.content  = columns[i].trim()
+    token_il.content = columns[i].trim()
     token_il.children = []
 
     state.push('th_close', 'th', -1)
@@ -39303,11 +39364,11 @@ function table (state, startLine, endLine, silent) {
     for (let i = 0; i < columnCount; i++) {
       const token_tdo = state.push('td_open', 'td', 1)
       if (aligns[i]) {
-        token_tdo.attrs  = [['style', 'text-align:' + aligns[i]]]
+        token_tdo.attrs = [['style', 'text-align:' + aligns[i]]]
       }
 
       const token_il = state.push('inline', '', 0)
-      token_il.content  = columns[i] ? columns[i].trim() : ''
+      token_il.content = columns[i] ? columns[i].trim() : ''
       token_il.children = []
 
       state.push('td_close', 'td', -1)
@@ -39353,9 +39414,9 @@ function code (state, startLine, endLine/*, silent */) {
 
   state.line = last
 
-  const token   = state.push('code_block', 'code', 0)
+  const token = state.push('code_block', 'code', 0)
   token.content = state.getLines(startLine, last, 4 + state.blkIndent, false) + '\n'
-  token.map     = [startLine, state.line]
+  token.map = [startLine, state.line]
 
   return true
 }
@@ -39447,11 +39508,11 @@ function fence (state, startLine, endLine, silent) {
 
   state.line = nextLine + (haveEndMarker ? 1 : 0)
 
-  const token   = state.push('fence', 'code', 0)
-  token.info    = params
+  const token = state.push('fence', 'code', 0)
+  token.info = params
   token.content = state.getLines(startLine + 1, nextLine, len, true)
-  token.markup  = markup
-  token.map     = [startLine, state.line]
+  token.markup = markup
+  token.map = [startLine, state.line]
 
   return true
 }
@@ -39477,10 +39538,10 @@ function blockquote (state, startLine, endLine, silent) {
   // so no point trying to find the end of it in silent mode
   if (silent) { return true }
 
-  const oldBMarks  = []
+  const oldBMarks = []
   const oldBSCount = []
-  const oldSCount  = []
-  const oldTShift  = []
+  const oldSCount = []
+  const oldTShift = []
 
   const terminatorRules = state.md.block.ruler.getRules('blockquote')
 
@@ -39640,14 +39701,14 @@ function blockquote (state, startLine, endLine, silent) {
   const oldIndent = state.blkIndent
   state.blkIndent = 0
 
-  const token_o  = state.push('blockquote_open', 'blockquote', 1)
+  const token_o = state.push('blockquote_open', 'blockquote', 1)
   token_o.markup = '>'
   const lines = [startLine, 0]
-  token_o.map    = lines
+  token_o.map = lines
 
   state.md.block.tokenize(state, startLine, nextLine)
 
-  const token_c  = state.push('blockquote_close', 'blockquote', -1)
+  const token_c = state.push('blockquote_close', 'blockquote', -1)
   token_c.markup = '>'
 
   state.lineMax = oldLineMax
@@ -39702,8 +39763,8 @@ function hr (state, startLine, endLine, silent) {
 
   state.line = startLine + 1
 
-  const token  = state.push('hr', 'hr', 0)
-  token.map    = [startLine, state.line]
+  const token = state.push('hr', 'hr', 0)
+  token.map = [startLine, state.line]
   token.markup = Array(cnt + 1).join(String.fromCharCode(marker))
 
   return true
@@ -39868,16 +39929,16 @@ function list (state, startLine, endLine, silent) {
   const listTokIdx = state.tokens.length
 
   if (isOrdered) {
-    token       = state.push('ordered_list_open', 'ol', 1)
+    token = state.push('ordered_list_open', 'ol', 1)
     if (markerValue !== 1) {
       token.attrs = [['start', markerValue]]
     }
   } else {
-    token       = state.push('bullet_list_open', 'ul', 1)
+    token = state.push('bullet_list_open', 'ul', 1)
   }
 
   const listLines = [nextLine, 0]
-  token.map    = listLines
+  token.map = listLines
   token.markup = String.fromCharCode(markerCharCode)
 
   //
@@ -39930,10 +39991,10 @@ function list (state, startLine, endLine, silent) {
     const indent = initial + indentAfterMarker
 
     // Run subparser & write tokens
-    token        = state.push('list_item_open', 'li', 1)
+    token = state.push('list_item_open', 'li', 1)
     token.markup = String.fromCharCode(markerCharCode)
     const itemLines = [nextLine, 0]
-    token.map    = itemLines
+    token.map = itemLines
     if (isOrdered) {
       token.info = state.src.slice(start, posAfterMarker - 1)
     }
@@ -39982,7 +40043,7 @@ function list (state, startLine, endLine, silent) {
     state.sCount[nextLine] = oldSCount
     state.tight = oldTight
 
-    token        = state.push('list_item_close', 'li', -1)
+    token = state.push('list_item_close', 'li', -1)
     token.markup = String.fromCharCode(markerCharCode)
 
     nextLine = state.line
@@ -40179,7 +40240,7 @@ function reference (state, startLine, _endLine, silent) {
         nextLine++
       }
     } else if (isSpace(ch)) {
-      /* eslint no-empty:0 */
+      /* Nothing */
     } else {
       break
     }
@@ -40328,23 +40389,23 @@ function reference (state, startLine, _endLine, silent) {
 ;// CONCATENATED MODULE: ./node_modules/markdown-it/lib/common/html_re.mjs
 // Regexps to match html elements
 
-const attr_name     = '[a-zA-Z_:][a-zA-Z0-9:._-]*'
+const attr_name = '[a-zA-Z_:][a-zA-Z0-9:._-]*'
 
-const unquoted      = '[^"\'=<>`\\x00-\\x20]+'
+const unquoted = '[^"\'=<>`\\x00-\\x20]+'
 const single_quoted = "'[^']*'"
 const double_quoted = '"[^"]*"'
 
-const attr_value  = '(?:' + unquoted + '|' + single_quoted + '|' + double_quoted + ')'
+const attr_value = '(?:' + unquoted + '|' + single_quoted + '|' + double_quoted + ')'
 
-const attribute   = '(?:\\s+' + attr_name + '(?:\\s*=\\s*' + attr_value + ')?)'
+const attribute = '(?:\\s+' + attr_name + '(?:\\s*=\\s*' + attr_value + ')?)'
 
-const open_tag    = '<[A-Za-z][A-Za-z0-9\\-]*' + attribute + '*\\s*\\/?>'
+const open_tag = '<[A-Za-z][A-Za-z0-9\\-]*' + attribute + '*\\s*\\/?>'
 
-const close_tag   = '<\\/[A-Za-z][A-Za-z0-9\\-]*\\s*>'
-const comment     = '<!---?>|<!--(?:[^-]|-[^-]|--[^>])*-->'
-const processing  = '<[?][\\s\\S]*?[?]>'
+const close_tag = '<\\/[A-Za-z][A-Za-z0-9\\-]*\\s*>'
+const comment = '<!---?>|<!--(?:[^-]|-[^-]|--[^>])*-->'
+const processing = '<[?][\\s\\S]*?[?]>'
 const declaration = '<![A-Za-z][^>]*>'
-const cdata       = '<!\\[CDATA\\[[\\s\\S]*?\\]\\]>'
+const cdata = '<!\\[CDATA\\[[\\s\\S]*?\\]\\]>'
 
 const HTML_TAG_RE = new RegExp('^(?:' + open_tag + '|' + close_tag + '|' + comment +
                         '|' + processing + '|' + declaration + '|' + cdata + ')')
@@ -40363,12 +40424,12 @@ const HTML_OPEN_CLOSE_TAG_RE = new RegExp('^(?:' + open_tag + '|' + close_tag + 
 //
 const HTML_SEQUENCES = [
   [/^<(script|pre|style|textarea)(?=(\s|>|$))/i, /<\/(script|pre|style|textarea)>/i, true],
-  [/^<!--/,        /-->/,   true],
-  [/^<\?/,         /\?>/,   true],
-  [/^<![A-Z]/,     />/,     true],
+  [/^<!--/, /-->/, true],
+  [/^<\?/, /\?>/, true],
+  [/^<![A-Za-z]/, />/, true],
   [/^<!\[CDATA\[/, /\]\]>/, true],
   [new RegExp('^</?(' + html_blocks.join('|') + ')(?=(\\s|/?>|$))', 'i'), /^$/, true],
-  [new RegExp(HTML_OPEN_CLOSE_TAG_RE.source + '\\s*$'),  /^$/, false]
+  [new RegExp(HTML_OPEN_CLOSE_TAG_RE.source + '\\s*$'), /^$/, false]
 ]
 
 function html_block (state, startLine, endLine, silent) {
@@ -40397,11 +40458,22 @@ function html_block (state, startLine, endLine, silent) {
 
   let nextLine = startLine + 1
 
+  // Block types 6 and 7 (the only ones whose end condition is a blank line)
+  // have `/^$/` as their closing regexp. For all other types (1-5, e.g.
+  // `<!--` comments), a blank line is regular content and must not terminate
+  // the block - it ends only when its closing sequence is found.
+  const endsOnBlankLine = HTML_SEQUENCES[i][1].test('')
+
   // If we are here - we detected HTML block.
   // Let's roll down till block end.
   if (!HTML_SEQUENCES[i][1].test(lineText)) {
     for (; nextLine < endLine; nextLine++) {
-      if (state.sCount[nextLine] < state.blkIndent) { break }
+      if (state.sCount[nextLine] < state.blkIndent) {
+        // An outdented blank line shouldn't end a block that doesn't end on a
+        // blank line (e.g. a `<!--` comment inside a list item). Such blocks
+        // must continue until their closing sequence regardless of indent.
+        if (endsOnBlankLine || !state.isEmpty(nextLine)) { break }
+      }
 
       pos = state.bMarks[nextLine] + state.tShift[nextLine]
       max = state.eMarks[nextLine]
@@ -40416,8 +40488,8 @@ function html_block (state, startLine, endLine, silent) {
 
   state.line = nextLine
 
-  const token   = state.push('html_block', '', 0)
-  token.map     = [startLine, nextLine]
+  const token = state.push('html_block', '', 0)
+  token.map = [startLine, nextLine]
   token.content = state.getLines(startLine, nextLine, state.blkIndent, true)
 
   return true
@@ -40435,7 +40507,7 @@ function heading (state, startLine, endLine, silent) {
   // if it's indented more than 3 spaces, it should be a code block
   if (state.sCount[startLine] - state.blkIndent >= 4) { return false }
 
-  let ch  = state.src.charCodeAt(pos)
+  let ch = state.src.charCodeAt(pos)
 
   if (ch !== 0x23/* # */ || pos >= max) { return false }
 
@@ -40461,16 +40533,16 @@ function heading (state, startLine, endLine, silent) {
 
   state.line = startLine + 1
 
-  const token_o  = state.push('heading_open', 'h' + String(level), 1)
+  const token_o = state.push('heading_open', 'h' + String(level), 1)
   token_o.markup = '########'.slice(0, level)
-  token_o.map    = [startLine, state.line]
+  token_o.map = [startLine, state.line]
 
-  const token_i    = state.push('inline', '', 0)
-  token_i.content  = state.src.slice(pos, max).trim()
-  token_i.map      = [startLine, state.line]
+  const token_i = state.push('inline', '', 0)
+  token_i.content = asciiTrim(state.src.slice(pos, max))
+  token_i.map = [startLine, state.line]
   token_i.children = []
 
-  const token_c  = state.push('heading_close', 'h' + String(level), -1)
+  const token_c = state.push('heading_close', 'h' + String(level), -1)
   token_c.markup = '########'.slice(0, level)
 
   return true
@@ -40478,6 +40550,8 @@ function heading (state, startLine, endLine, silent) {
 
 ;// CONCATENATED MODULE: ./node_modules/markdown-it/lib/rules_block/lheading.mjs
 // lheading (---, ===)
+
+
 
 function lheading (state, startLine, endLine/*, silent */) {
   const terminatorRules = state.md.block.ruler.getRules('paragraph')
@@ -40536,24 +40610,25 @@ function lheading (state, startLine, endLine/*, silent */) {
 
   if (!level) {
     // Didn't find valid underline
+    state.parentType = oldParentType
     return false
   }
 
-  const content = state.getLines(startLine, nextLine, state.blkIndent, false).trim()
+  const content = asciiTrim(state.getLines(startLine, nextLine, state.blkIndent, false))
 
   state.line = nextLine + 1
 
-  const token_o    = state.push('heading_open', 'h' + String(level), 1)
-  token_o.markup   = String.fromCharCode(marker)
-  token_o.map      = [startLine, state.line]
+  const token_o = state.push('heading_open', 'h' + String(level), 1)
+  token_o.markup = String.fromCharCode(marker)
+  token_o.map = [startLine, state.line]
 
-  const token_i    = state.push('inline', '', 0)
-  token_i.content  = content
-  token_i.map      = [startLine, state.line - 1]
+  const token_i = state.push('inline', '', 0)
+  token_i.content = content
+  token_i.map = [startLine, state.line - 1]
   token_i.children = []
 
-  const token_c    = state.push('heading_close', 'h' + String(level), -1)
-  token_c.markup   = String.fromCharCode(marker)
+  const token_c = state.push('heading_close', 'h' + String(level), -1)
+  token_c.markup = String.fromCharCode(marker)
 
   state.parentType = oldParentType
 
@@ -40562,6 +40637,8 @@ function lheading (state, startLine, endLine/*, silent */) {
 
 ;// CONCATENATED MODULE: ./node_modules/markdown-it/lib/rules_block/paragraph.mjs
 // Paragraph
+
+
 
 function paragraph (state, startLine, endLine) {
   const terminatorRules = state.md.block.ruler.getRules('paragraph')
@@ -40589,16 +40666,16 @@ function paragraph (state, startLine, endLine) {
     if (terminate) { break }
   }
 
-  const content = state.getLines(startLine, nextLine, state.blkIndent, false).trim()
+  const content = asciiTrim(state.getLines(startLine, nextLine, state.blkIndent, false))
 
   state.line = nextLine
 
-  const token_o    = state.push('paragraph_open', 'p', 1)
-  token_o.map      = [startLine, state.line]
+  const token_o = state.push('paragraph_open', 'p', 1)
+  token_o.map = [startLine, state.line]
 
-  const token_i    = state.push('inline', '', 0)
-  token_i.content  = content
-  token_i.map      = [startLine, state.line]
+  const token_i = state.push('inline', '', 0)
+  token_i.content = content
+  token_i.map = [startLine, state.line]
   token_i.children = []
 
   state.push('paragraph_close', 'p', -1)
@@ -40633,17 +40710,17 @@ function paragraph (state, startLine, endLine) {
 const parser_block_rules = [
   // First 2 params - rule name & source. Secondary array - list of rules,
   // which can be terminated by this one.
-  ['table',      table,      ['paragraph', 'reference']],
-  ['code',       code],
-  ['fence',      fence,      ['paragraph', 'reference', 'blockquote', 'list']],
+  ['table', table, ['paragraph', 'reference']],
+  ['code', code],
+  ['fence', fence, ['paragraph', 'reference', 'blockquote', 'list']],
   ['blockquote', blockquote, ['paragraph', 'reference', 'blockquote', 'list']],
-  ['hr',         hr,         ['paragraph', 'reference', 'blockquote', 'list']],
-  ['list',       list,       ['paragraph', 'reference', 'blockquote']],
-  ['reference',  reference],
+  ['hr', hr, ['paragraph', 'reference', 'blockquote', 'list']],
+  ['list', list, ['paragraph', 'reference', 'blockquote']],
+  ['reference', reference],
   ['html_block', html_block, ['paragraph', 'reference', 'blockquote']],
-  ['heading',    heading,    ['paragraph', 'reference', 'blockquote']],
-  ['lheading',   lheading],
-  ['paragraph',  paragraph]
+  ['heading', heading, ['paragraph', 'reference', 'blockquote']],
+  ['lheading', lheading],
+  ['paragraph', paragraph]
 ]
 
 /**
@@ -40836,8 +40913,30 @@ StateInline.prototype.scanDelims = function (start, canSplitWord) {
   const max = this.posMax
   const marker = this.src.charCodeAt(start)
 
-  // treat beginning of the line as a whitespace
-  const lastChar = start > 0 ? this.src.charCodeAt(start - 1) : 0x20
+  // Astral characters below are combined manually, because .codePointAt()
+  // does not guarantee numeric type output. And we don't wish JIT cache issues.
+  // The broken surrogate pairs are evaluated as U+FFFD to prevent possible
+  // crashes.
+
+  let lastChar
+  if (start === 0) {
+    // treat beginning of the line as a whitespace
+    lastChar = 0x20
+  } else if (start === 1) {
+    lastChar = this.src.charCodeAt(0)
+    if ((lastChar & 0xF800) === 0xD800) { lastChar = 0xFFFD }
+  } else {
+    lastChar = this.src.charCodeAt(start - 1)
+    if ((lastChar & 0xFC00) === 0xDC00) {
+      // low surrogate => add high one, replace broken pair with U+FFFD
+      const highSurr = this.src.charCodeAt(start - 2)
+      lastChar = (highSurr & 0xFC00) === 0xD800
+        ? 0x10000 + ((highSurr - 0xD800) << 10) + (lastChar - 0xDC00)
+        : 0xFFFD
+    } else if ((lastChar & 0xFC00) === 0xD800) {
+      lastChar = 0xFFFD
+    }
+  }
 
   let pos = start
   while (pos < max && this.src.charCodeAt(pos) === marker) { pos++ }
@@ -40845,10 +40944,19 @@ StateInline.prototype.scanDelims = function (start, canSplitWord) {
   const count = pos - start
 
   // treat end of the line as a whitespace
-  const nextChar = pos < max ? this.src.charCodeAt(pos) : 0x20
+  let nextChar = pos < max ? this.src.charCodeAt(pos) : 0x20
+  if ((nextChar & 0xFC00) === 0xD800) {
+    // high surrogate => add low one, replace broken pair with U+FFFD
+    const lowSurr = this.src.charCodeAt(pos + 1)
+    nextChar = (lowSurr & 0xFC00) === 0xDC00
+      ? 0x10000 + ((nextChar - 0xD800) << 10) + (lowSurr - 0xDC00)
+      : 0xFFFD
+  } else if ((nextChar & 0xFC00) === 0xDC00) {
+    nextChar = 0xFFFD
+  }
 
-  const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctChar(String.fromCharCode(lastChar))
-  const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctChar(String.fromCharCode(nextChar))
+  const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctCharCode(lastChar)
+  const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctCharCode(nextChar)
 
   const isLastWhiteSpace = isWhiteSpace(lastChar)
   const isNextWhiteSpace = isWhiteSpace(nextChar)
@@ -40858,8 +40966,8 @@ StateInline.prototype.scanDelims = function (start, canSplitWord) {
   const right_flanking =
     !isLastWhiteSpace && (!isLastPunctChar || isNextWhiteSpace || isNextPunctChar)
 
-  const can_open  = left_flanking  && (canSplitWord || !right_flanking || isLastPunctChar)
-  const can_close = right_flanking && (canSplitWord || !left_flanking  || isNextPunctChar)
+  const can_open = left_flanking && (canSplitWord || !right_flanking || isLastPunctChar)
+  const can_close = right_flanking && (canSplitWord || !left_flanking || isNextPunctChar)
 
   return { can_open, can_close, length: count }
 }
@@ -40958,10 +41066,20 @@ module.exports = function text(state, silent) {
 }; */
 
 ;// CONCATENATED MODULE: ./node_modules/markdown-it/lib/rules_inline/linkify.mjs
-// Process links like https://example.org/
+// Early process links like https://example.org/ to have priority
+// over emphasis, etc.
 
 // RFC3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
-const SCHEME_RE = /(?:^|[^a-z0-9.+-])([a-z][a-z0-9.+-]*)$/i
+function isAsciiAlpha (code) {
+  return (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A)
+}
+
+function isSchemeChar (code) {
+  return (code >= 0x41 && code <= 0x5A) ||
+    (code >= 0x61 && code <= 0x7A) ||
+    (code >= 0x30 && code <= 0x39) ||
+    code === 0x2B || code === 0x2D || code === 0x2E
+}
 
 function linkify_linkify (state, silent) {
   if (!state.md.options.linkify) return false
@@ -40975,19 +41093,27 @@ function linkify_linkify (state, silent) {
   if (state.src.charCodeAt(pos + 1) !== 0x2F/* / */) return false
   if (state.src.charCodeAt(pos + 2) !== 0x2F/* / */) return false
 
-  const match = state.pending.match(SCHEME_RE)
-  if (!match) return false
+  // Search backwards for the scheme, but no more than 10 characters, the length
+  // of the pending string, or the length of the source prefix.
+  // Use state.src instead of state.pending because it is faster to access.
+  const protoMin = pos - Math.min(10, state.pending.length, pos)
+  let protoStart = pos
+  while (protoStart > protoMin && isSchemeChar(state.src.charCodeAt(protoStart - 1))) {
+    protoStart--
+  }
 
-  const proto = match[1]
+  if (protoStart === pos || !isAsciiAlpha(state.src.charCodeAt(protoStart))) return false
 
-  const link = state.md.linkify.matchAtStart(state.src.slice(pos - proto.length))
+  const protoLength = pos - protoStart
+
+  const link = state.md.linkify.matchAtStart(state.src.slice(protoStart))
   if (!link) return false
 
   let url = link.url
 
   // invalid link, but still detected by linkify somehow;
   // need to check to prevent infinite loop below
-  if (url.length <= proto.length) return false
+  if (url.length <= protoLength) return false
 
   // disallow '*' at the end of the link (conflicts with emphasis)
   // do manual backsearch to avoid perf issues with regex /\*+$/ on "****...****a".
@@ -41003,7 +41129,7 @@ function linkify_linkify (state, silent) {
   if (!state.md.validateLink(fullUrl)) return false
 
   if (!silent) {
-    state.pending = state.pending.slice(0, -proto.length)
+    state.pending = state.pending.slice(0, -protoLength)
 
     const token_o = state.push('link_open', 'a', 1)
     token_o.attrs = [['href', fullUrl]]
@@ -41018,7 +41144,7 @@ function linkify_linkify (state, silent) {
     token_c.info = 'auto'
   }
 
-  state.pos += url.length - proto.length
+  state.pos += url.length - protoLength
   return true
 }
 
@@ -41107,6 +41233,20 @@ function rules_inline_escape_escape (state, silent) {
     return true
   }
 
+  // '\' before a space is a literal backslash. Don't consume the space, so a
+  // trailing two-space hard line break is still detected by the newline rule.
+  if (ch1 === 0x20) {
+    if (!silent) {
+      const token = state.push('text_special', '', 0)
+      token.content = '\\'
+      token.markup = '\\'
+      token.info = 'escape'
+    }
+
+    state.pos = pos
+    return true
+  }
+
   let escapedStr = state.src[pos]
 
   if (ch1 >= 0xD800 && ch1 <= 0xDBFF && pos + 1 < max) {
@@ -41130,7 +41270,7 @@ function rules_inline_escape_escape (state, silent) {
     }
 
     token.markup = origStr
-    token.info   = 'escape'
+    token.info = 'escape'
   }
 
   state.pos = pos + 1
@@ -41222,13 +41362,13 @@ function strikethrough_tokenize (state, silent) {
   let token
 
   if (len % 2) {
-    token         = state.push('text', '', 0)
+    token = state.push('text', '', 0)
     token.content = ch
     len--
   }
 
   for (let i = 0; i < len; i += 2) {
-    token         = state.push('text', '', 0)
+    token = state.push('text', '', 0)
     token.content = ch + ch
 
     state.delimiters.push({
@@ -41264,18 +41404,18 @@ function postProcess (state, delimiters) {
 
     const endDelim = delimiters[startDelim.end]
 
-    token         = state.tokens[startDelim.token]
-    token.type    = 's_open'
-    token.tag     = 's'
+    token = state.tokens[startDelim.token]
+    token.type = 's_open'
+    token.tag = 's'
     token.nesting = 1
-    token.markup  = '~~'
+    token.markup = '~~'
     token.content = ''
 
-    token         = state.tokens[endDelim.token]
-    token.type    = 's_close'
-    token.tag     = 's'
+    token = state.tokens[endDelim.token]
+    token.type = 's_close'
+    token.tag = 's'
     token.nesting = -1
-    token.markup  = '~~'
+    token.markup = '~~'
     token.content = ''
 
     if (state.tokens[endDelim.token - 1].type === 'text' &&
@@ -41411,18 +41551,18 @@ function emphasis_postProcess (state, delimiters) {
 
     const ch = String.fromCharCode(startDelim.marker)
 
-    const token_o   = state.tokens[startDelim.token]
-    token_o.type    = isStrong ? 'strong_open' : 'em_open'
-    token_o.tag     = isStrong ? 'strong' : 'em'
+    const token_o = state.tokens[startDelim.token]
+    token_o.type = isStrong ? 'strong_open' : 'em_open'
+    token_o.tag = isStrong ? 'strong' : 'em'
     token_o.nesting = 1
-    token_o.markup  = isStrong ? ch + ch : ch
+    token_o.markup = isStrong ? ch + ch : ch
     token_o.content = ''
 
-    const token_c   = state.tokens[endDelim.token]
-    token_c.type    = isStrong ? 'strong_close' : 'em_close'
-    token_c.tag     = isStrong ? 'strong' : 'em'
+    const token_c = state.tokens[endDelim.token]
+    token_c.type = isStrong ? 'strong_close' : 'em_close'
+    token_c.tag = isStrong ? 'strong' : 'em'
     token_c.nesting = -1
-    token_c.markup  = isStrong ? ch + ch : ch
+    token_c.markup = isStrong ? ch + ch : ch
     token_c.content = ''
 
     if (isStrong) {
@@ -41577,7 +41717,7 @@ function link_link (state, silent) {
 
     const token_o = state.push('link_open', 'a', 1)
     const attrs = [['href', href]]
-    token_o.attrs  = attrs
+    token_o.attrs = attrs
     if (title) {
       attrs.push(['title', title])
     }
@@ -41738,7 +41878,7 @@ function image_image (state, silent) {
 // Process autolinks '<protocol:...>'
 
 /* eslint max-len:0 */
-const EMAIL_RE    = /^([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/
+const EMAIL_RE = /^([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/
 /* eslint-disable-next-line no-control-regex */
 const AUTOLINK_RE = /^([a-zA-Z][a-zA-Z0-9+.-]{1,31}):([^<>\x00-\x20]*)$/
 
@@ -41766,17 +41906,17 @@ function autolink (state, silent) {
     if (!state.md.validateLink(fullUrl)) { return false }
 
     if (!silent) {
-      const token_o   = state.push('link_open', 'a', 1)
-      token_o.attrs   = [['href', fullUrl]]
-      token_o.markup  = 'autolink'
-      token_o.info    = 'auto'
+      const token_o = state.push('link_open', 'a', 1)
+      token_o.attrs = [['href', fullUrl]]
+      token_o.markup = 'autolink'
+      token_o.info = 'auto'
 
-      const token_t   = state.push('text', '', 0)
+      const token_t = state.push('text', '', 0)
       token_t.content = state.md.normalizeLinkText(url)
 
-      const token_c   = state.push('link_close', 'a', -1)
-      token_c.markup  = 'autolink'
-      token_c.info    = 'auto'
+      const token_c = state.push('link_close', 'a', -1)
+      token_c.markup = 'autolink'
+      token_c.info = 'auto'
     }
 
     state.pos += url.length + 2
@@ -41788,17 +41928,17 @@ function autolink (state, silent) {
     if (!state.md.validateLink(fullUrl)) { return false }
 
     if (!silent) {
-      const token_o   = state.push('link_open', 'a', 1)
-      token_o.attrs   = [['href', fullUrl]]
-      token_o.markup  = 'autolink'
-      token_o.info    = 'auto'
+      const token_o = state.push('link_open', 'a', 1)
+      token_o.attrs = [['href', fullUrl]]
+      token_o.markup = 'autolink'
+      token_o.info = 'auto'
 
-      const token_t   = state.push('text', '', 0)
+      const token_t = state.push('text', '', 0)
       token_t.content = state.md.normalizeLinkText(url)
 
-      const token_c   = state.push('link_close', 'a', -1)
-      token_c.markup  = 'autolink'
-      token_c.info    = 'auto'
+      const token_c = state.push('link_close', 'a', -1)
+      token_c.markup = 'autolink'
+      token_c.info = 'auto'
     }
 
     state.pos += url.length + 2
@@ -41853,7 +41993,7 @@ function html_inline (state, silent) {
     const token = state.push('html_inline', '', 0)
     token.content = match[0]
 
-    if (html_inline_isLinkOpen(token.content))  state.linkLevel++
+    if (html_inline_isLinkOpen(token.content)) state.linkLevel++
     if (html_inline_isLinkClose(token.content)) state.linkLevel--
   }
   state.pos += match[0].length
@@ -41867,7 +42007,7 @@ function html_inline (state, silent) {
 
 
 const DIGITAL_RE = /^&#((?:x[a-f0-9]{1,6}|[0-9]{1,7}));/i
-const NAMED_RE   = /^&([a-z][a-z0-9]{1,31});/i
+const NAMED_RE = /^&([a-z][a-z0-9]{1,31});/i
 
 function entity (state, silent) {
   const pos = state.pos
@@ -41885,10 +42025,10 @@ function entity (state, silent) {
       if (!silent) {
         const code = match[1][0].toLowerCase() === 'x' ? parseInt(match[1].slice(1), 16) : parseInt(match[1], 10)
 
-        const token   = state.push('text_special', '', 0)
+        const token = state.push('text_special', '', 0)
         token.content = isValidEntityCode(code) ? utils_fromCodePoint(code) : utils_fromCodePoint(0xFFFD)
-        token.markup  = match[0]
-        token.info    = 'entity'
+        token.markup = match[0]
+        token.info = 'entity'
       }
       state.pos += match[0].length
       return true
@@ -41896,13 +42036,13 @@ function entity (state, silent) {
   } else {
     const match = state.src.slice(pos).match(NAMED_RE)
     if (match) {
-      const decoded = decode_decodeHTML(match[0])
+      const decoded = decodeHTMLStrict(match[0])
       if (decoded !== match[0]) {
         if (!silent) {
-          const token   = state.push('text_special', '', 0)
+          const token = state.push('text_special', '', 0)
           token.content = decoded
-          token.markup  = match[0]
-          token.info    = 'entity'
+          token.markup = match[0]
+          token.info = 'entity'
         }
         state.pos += match[0].length
         return true
@@ -42001,8 +42141,8 @@ function processDelimiters (delimiters) {
           jumps[closerIdx] = closerIdx - openerIdx + lastJump
           jumps[openerIdx] = lastJump
 
-          closer.open  = false
-          opener.end   = closerIdx
+          closer.open = false
+          opener.end = closerIdx
           opener.close = false
           newMinOpenerIdx = -1
           // treat next token as start of run,
@@ -42108,18 +42248,18 @@ function fragments_join (state) {
 // Parser rules
 
 const parser_inline_rules = [
-  ['text',            text_text],
-  ['linkify',         linkify_linkify],
-  ['newline',         newline],
-  ['escape',          rules_inline_escape_escape],
-  ['backticks',       backtick],
-  ['strikethrough',   strikethrough.tokenize],
-  ['emphasis',        emphasis.tokenize],
-  ['link',            link_link],
-  ['image',           image_image],
-  ['autolink',        autolink],
-  ['html_inline',     html_inline],
-  ['entity',          entity]
+  ['text', text_text],
+  ['linkify', linkify_linkify],
+  ['newline', newline],
+  ['escape', rules_inline_escape_escape],
+  ['backticks', backtick],
+  ['strikethrough', strikethrough.tokenize],
+  ['emphasis', emphasis.tokenize],
+  ['link', link_link],
+  ['image', image_image],
+  ['autolink', autolink],
+  ['html_inline', html_inline],
+  ['entity', entity]
 ]
 
 // `rule2` ruleset was created specifically for emphasis/strikethrough
@@ -42128,12 +42268,12 @@ const parser_inline_rules = [
 // Don't use this for anything except pairs (plugins working with `balance_pairs`).
 //
 const _rules2 = [
-  ['balance_pairs',   link_pairs],
-  ['strikethrough',   strikethrough.postProcess],
-  ['emphasis',        emphasis.postProcess],
+  ['balance_pairs', link_pairs],
+  ['strikethrough', strikethrough.postProcess],
+  ['emphasis', emphasis.postProcess],
   // rules for pairs separate '**' into its own text tokens, which may be left unused,
   // rule below merges unused segments back with the rest of the text
-  ['fragments_join',  fragments_join]
+  ['fragments_join', fragments_join]
 ]
 
 /**
@@ -42303,7 +42443,7 @@ ParserInline.prototype.State = state_inline
   // All possible word characters (everything without punctuation, spaces & controls)
   // Defined via punctuation & spaces to save space
   // Should be something like \p{\L\N\S\M} (\w but without `_`)
-  re.src_pseudo_letter = '(?:(?!' + text_separators + '|' + re.src_ZPCc + ')' + re.src_Any + ')'
+  re.src_pseudo_letter = `(?:(?!${text_separators}|${re.src_ZPCc})${re.src_Any})`
   // The same as abothe but without [0-9]
   // var src_pseudo_letter_non_d = '(?:(?![0-9]|' + src_ZPCc + ')' + src_Any + ')';
 
@@ -42312,7 +42452,9 @@ ParserInline.prototype.State = state_inline
     '(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
 
   // Prohibit any of "@/[]()" in user/pass to avoid wrong domain fetch.
-  re.src_auth = '(?:(?:(?!' + re.src_ZCc + '|[@/\\[\\]()]).)+@)?'
+  // Length is capped to exclude possible rescans till the end and avoid O(n^2)
+  // DoS. No standard limit, just take something reasonable.
+  re.src_auth = `(?:(?:(?!${re.src_ZCc}|[@/\\[\\]()]).){1,50}@)?`
 
   re.src_port =
 
@@ -42320,23 +42462,23 @@ ParserInline.prototype.State = state_inline
 
   re.src_host_terminator =
 
-    '(?=$|' + text_separators + '|' + re.src_ZPCc + ')' +
-    '(?!' + (opts['---'] ? '-(?!--)|' : '-|') + '_|:\\d|\\.-|\\.(?!$|' + re.src_ZPCc + '))'
+    `(?=$|${text_separators}|${re.src_ZPCc})` +
+    `(?!${opts['---'] ? '-(?!--)|' : '-|'}_|:\\d|\\.-|\\.(?!$|${re.src_ZPCc}))`
 
   re.src_path =
 
     '(?:' +
       '[/?#]' +
         '(?:' +
-          '(?!' + re.src_ZCc + '|' + text_separators + '|[()[\\]{}.,"\'?!\\-;]).|' +
-          '\\[(?:(?!' + re.src_ZCc + '|\\]).)*\\]|' +
-          '\\((?:(?!' + re.src_ZCc + '|[)]).)*\\)|' +
-          '\\{(?:(?!' + re.src_ZCc + '|[}]).)*\\}|' +
-          '\\"(?:(?!' + re.src_ZCc + '|["]).)+\\"|' +
-          "\\'(?:(?!" + re.src_ZCc + "|[']).)+\\'|" +
+          `(?!${re.src_ZCc}|${text_separators}|[()[\\]{}.,"'?!\\-;]).|` +
+          `\\[(?:(?!${re.src_ZCc}|\\]).)*\\]|` +
+          `\\((?:(?!${re.src_ZCc}|[)]).)*\\)|` +
+          `\\{(?:(?!${re.src_ZCc}|[}]).)*\\}|` +
+          `\\"(?:(?!${re.src_ZCc}|["]).)+\\"|` +
+          `\\'(?:(?!${re.src_ZCc}|[']).)+\\'|` +
 
           // allow `I'm_king` if no pair found
-          "\\'(?=" + re.src_pseudo_letter + '|[-])|' +
+          `\\'(?=${re.src_pseudo_letter}|[-])|` +
 
           // google has many dots in "google search" links (#66, #81).
           // github has ... in commit range links,
@@ -42348,30 +42490,32 @@ ParserInline.prototype.State = state_inline
           // until more examples found.
           '\\.{2,}[a-zA-Z0-9%/&]|' +
 
-          '\\.(?!' + re.src_ZCc + '|[.]|$)|' +
+          `\\.(?!${re.src_ZCc}|[.]|$)|` +
           (opts['---']
             ? '\\-(?!--(?:[^-]|$))(?:-*)|' // `---` => long dash, terminate
             : '\\-+|'
           ) +
           // allow `,,,` in paths
-          ',(?!' + re.src_ZCc + '|$)|' +
+          `,(?!${re.src_ZCc}|$)|` +
 
           // allow `;` if not followed by space-like char
-          ';(?!' + re.src_ZCc + '|$)|' +
+          `;(?!${re.src_ZCc}|$)|` +
 
           // allow `!!!` in paths, but not at the end
-          '\\!+(?!' + re.src_ZCc + '|[!]|$)|' +
+          `\\!+(?!${re.src_ZCc}|[!]|$)|` +
 
-          '\\?(?!' + re.src_ZCc + '|[?]|$)' +
+          `\\?(?!${re.src_ZCc}|[?]|$)` +
         ')+' +
       '|\\/' +
     ')?'
 
   // Allow anything in markdown spec, forbid quote (") at the first position
   // because emails enclosed in quotes are far more common
+  // Max name length capped to 64 chars (RFC 5321). This also prevents O(n^2)
+  // rescans to the end on inputs like `mailto:mailto:...`
   re.src_email_name =
 
-    '[\\-;:&=\\+\\$,\\.a-zA-Z0-9_][\\-;:&=\\+\\$,\\"\\.a-zA-Z0-9_]*'
+    '[\\-;:&=\\+\\$,\\.a-zA-Z0-9_][\\-;:&=\\+\\$,\\"\\.a-zA-Z0-9_]{0,63}'
 
   re.src_xn =
 
@@ -42386,7 +42530,7 @@ ParserInline.prototype.State = state_inline
     '(?:' +
       re.src_xn +
       '|' +
-      re.src_pseudo_letter + '{1,63}' +
+      `${re.src_pseudo_letter}{1,63}` +
     ')'
 
   re.src_domain =
@@ -42394,9 +42538,9 @@ ParserInline.prototype.State = state_inline
     '(?:' +
       re.src_xn +
       '|' +
-      '(?:' + re.src_pseudo_letter + ')' +
+      `(?:${re.src_pseudo_letter})` +
       '|' +
-      '(?:' + re.src_pseudo_letter + '(?:-|' + re.src_pseudo_letter + '){0,61}' + re.src_pseudo_letter + ')' +
+      `(?:${re.src_pseudo_letter}(?:-|${re.src_pseudo_letter}){0,61}${re.src_pseudo_letter})` +
     ')'
 
   re.src_host =
@@ -42405,7 +42549,7 @@ ParserInline.prototype.State = state_inline
     // Don't need IP check, because digits are already allowed in normal domain names
     //   src_ip4 +
     // '|' +
-      '(?:(?:(?:' + re.src_domain + ')\\.)*' + re.src_domain/* _root */ + ')' +
+      `(?:(?:(?:${re.src_domain})\\.)*${re.src_domain})`/* _root */ +
     ')'
 
   re.tpl_host_fuzzy =
@@ -42413,12 +42557,12 @@ ParserInline.prototype.State = state_inline
     '(?:' +
       re.src_ip4 +
     '|' +
-      '(?:(?:(?:' + re.src_domain + ')\\.)+(?:%TLDS%))' +
+      `(?:(?:(?:${re.src_domain})\\.)+(?:%TLDS%))` +
     ')'
 
   re.tpl_host_no_ip_fuzzy =
 
-    '(?:(?:(?:' + re.src_domain + ')\\.)+(?:%TLDS%))'
+    `(?:(?:(?:${re.src_domain})\\.)+(?:%TLDS%))`
 
   re.src_host_strict =
 
@@ -42447,24 +42591,24 @@ ParserInline.prototype.State = state_inline
   // Rude test fuzzy links by host, for quick deny
   re.tpl_host_fuzzy_test =
 
-    'localhost|www\\.|\\.\\d{1,3}\\.|(?:\\.(?:%TLDS%)(?:' + re.src_ZPCc + '|>|$))'
+    `localhost|www\\.|\\.\\d{1,3}\\.|(?:\\.(?:%TLDS%)(?:${re.src_ZPCc}|>|$))`
 
   re.tpl_email_fuzzy =
 
-      '(^|' + text_separators + '|"|\\(|' + re.src_ZCc + ')' +
-      '(' + re.src_email_name + '@' + re.tpl_host_fuzzy_strict + ')'
+      `(^|${text_separators}|"|\\(|${re.src_ZCc})` +
+      `(${re.src_email_name}@${re.tpl_host_fuzzy_strict})`
 
   re.tpl_link_fuzzy =
       // Fuzzy link can't be prepended with .:/\- and non punctuation.
       // but can start with > (markdown blockquote)
-      '(^|(?![.:/\\-_@])(?:[$+<=>^`|\uff5c]|' + re.src_ZPCc + '))' +
-      '((?![$+<=>^`|\uff5c])' + re.tpl_host_port_fuzzy_strict + re.src_path + ')'
+      `(^|(?![.:/\\-_@])(?:[$+<=>^\`|\uff5c]|${re.src_ZPCc}))` +
+      `((?![$+<=>^\`|\uff5c])${re.tpl_host_port_fuzzy_strict}${re.src_path})`
 
   re.tpl_link_no_ip_fuzzy =
       // Fuzzy link can't be prepended with .:/\- and non punctuation.
       // but can start with > (markdown blockquote)
-      '(^|(?![.:/\\-_@])(?:[$+<=>^`|\uff5c]|' + re.src_ZPCc + '))' +
-      '((?![$+<=>^`|\uff5c])' + re.tpl_host_port_no_ip_fuzzy_strict + re.src_path + ')'
+      `(^|(?![.:/\\-_@])(?:[$+<=>^\`|\uff5c]|${re.src_ZPCc}))` +
+      `((?![$+<=>^\`|\uff5c])${re.tpl_host_port_no_ip_fuzzy_strict}${re.src_path})`
 
   return re
 }
@@ -42523,7 +42667,7 @@ const defaultSchemas = {
       if (!self.re.http) {
         // compile lazily, because "host"-containing variables can change on tlds update.
         self.re.http = new RegExp(
-          '^\\/\\/' + self.re.src_auth + self.re.src_host_port_strict + self.re.src_path, 'i'
+          `^\\/\\/${self.re.src_auth}${self.re.src_host_port_strict}${self.re.src_path}`, 'i'
         )
       }
       if (self.re.http.test(tail)) {
@@ -42545,7 +42689,7 @@ const defaultSchemas = {
           self.re.src_auth +
           // Don't allow single-level domains, because of false positives like '//test'
           // with code comments
-          '(?:localhost|(?:(?:' + self.re.src_domain + ')\\.)+' + self.re.src_domain_root + ')' +
+          `(?:localhost|(?:(?:${self.re.src_domain})\\.)+${self.re.src_domain_root})` +
           self.re.src_port +
           self.re.src_host_terminator +
           self.re.src_path,
@@ -42569,7 +42713,7 @@ const defaultSchemas = {
 
       if (!self.re.mailto) {
         self.re.mailto = new RegExp(
-          '^' + self.re.src_email_name + '@' + self.re.src_host_strict, 'i'
+          `^${self.re.src_email_name}@${self.re.src_host_strict}`, 'i'
         )
       }
       if (self.re.mailto.test(tail)) {
@@ -42581,16 +42725,10 @@ const defaultSchemas = {
 }
 
 // RE pattern for 2-character tlds (autogenerated by ./support/tlds_2char_gen.js)
-/* eslint-disable-next-line max-len */
 const tlds_2ch_src_re = 'a[cdefgilmnoqrstuwxz]|b[abdefghijmnorstvwyz]|c[acdfghiklmnoruvwxyz]|d[ejkmoz]|e[cegrstu]|f[ijkmor]|g[abdefghilmnpqrstuwy]|h[kmnrtu]|i[delmnoqrst]|j[emop]|k[eghimnprwyz]|l[abcikrstuvy]|m[acdeghklmnopqrstuvwxyz]|n[acefgilopruz]|om|p[aefghklmnrstwy]|qa|r[eosuw]|s[abcdeghijklmnortuvxyz]|t[cdfghjklmnortvwz]|u[agksyz]|v[aceginu]|w[fs]|y[et]|z[amw]'
 
 // DON'T try to make PRs with changes. Extend TLDs with LinkifyIt.tlds() instead
 const tlds_default = 'biz|com|edu|gov|net|org|pro|web|xxx|aero|asia|coop|info|museum|name|shop|рф'.split('|')
-
-function resetScanCache (self) {
-  self.__index__ = -1
-  self.__text_cache__ = ''
-}
 
 function createValidator (re) {
   return function (text, pos) {
@@ -42630,8 +42768,11 @@ function compile (self) {
   function untpl (tpl) { return tpl.replace('%TLDS%', re.src_tlds) }
 
   re.email_fuzzy = RegExp(untpl(re.tpl_email_fuzzy), 'i')
+  re.email_fuzzy_global = RegExp(untpl(re.tpl_email_fuzzy), 'ig')
   re.link_fuzzy = RegExp(untpl(re.tpl_link_fuzzy), 'i')
+  re.link_fuzzy_global = RegExp(untpl(re.tpl_link_fuzzy), 'ig')
   re.link_no_ip_fuzzy = RegExp(untpl(re.tpl_link_no_ip_fuzzy), 'i')
+  re.link_no_ip_fuzzy_global = RegExp(untpl(re.tpl_link_no_ip_fuzzy), 'ig')
   re.host_fuzzy_test = RegExp(untpl(re.tpl_host_fuzzy_test), 'i')
 
   //
@@ -42643,7 +42784,7 @@ function compile (self) {
   self.__compiled__ = {} // Reset compiled data
 
   function schemaError (name, val) {
-    throw new Error('(LinkifyIt) Invalid schema "' + name + '": ' + val)
+    throw new Error(`(LinkifyIt) Invalid schema "${name}": ${val}`)
   }
 
   Object.keys(self.__schemas__).forEach(function (name) {
@@ -42717,20 +42858,14 @@ function compile (self) {
     .map(linkify_it_escapeRE)
     .join('|')
   // (?!_) cause 1.5x slowdown
-  self.re.schema_test = RegExp('(^|(?!_)(?:[><\uff5c]|' + re.src_ZPCc + '))(' + slist + ')', 'i')
-  self.re.schema_search = RegExp('(^|(?!_)(?:[><\uff5c]|' + re.src_ZPCc + '))(' + slist + ')', 'ig')
-  self.re.schema_at_start = RegExp('^' + self.re.schema_search.source, 'i')
+  self.re.schema_test = RegExp(`(^|(?!_)(?:[><\uff5c]|${re.src_ZPCc}))(${slist})`, 'i')
+  self.re.schema_search = RegExp(`(^|(?!_)(?:[><\uff5c]|${re.src_ZPCc}))(${slist})`, 'ig')
+  self.re.schema_at_start = RegExp(`^${self.re.schema_search.source}`, 'i')
 
   self.re.pretest = RegExp(
-    '(' + self.re.schema_test.source + ')|(' + self.re.host_fuzzy_test.source + ')|@',
+    `(${self.re.schema_test.source})|(${self.re.host_fuzzy_test.source})|@`,
     'i'
   )
-
-  //
-  // Cleanup
-  //
-
-  resetScanCache(self)
 }
 
 /**
@@ -42738,55 +42873,45 @@ function compile (self) {
  *
  * Match result. Single element of array, returned by [[LinkifyIt#match]]
  **/
-function Match (self, shift) {
-  const start = self.__index__
-  const end = self.__last_index__
-  const text = self.__text_cache__.slice(start, end)
+function Match (text, schema, index, lastIndex) {
+  const raw = text.slice(index, lastIndex)
 
   /**
    * Match#schema -> String
    *
    * Prefix (protocol) for matched string.
    **/
-  this.schema = self.__schema__.toLowerCase()
+  this.schema = schema.toLowerCase()
   /**
    * Match#index -> Number
    *
    * First position of matched string.
    **/
-  this.index = start + shift
+  this.index = index
   /**
    * Match#lastIndex -> Number
    *
    * Next position after matched string.
    **/
-  this.lastIndex = end + shift
+  this.lastIndex = lastIndex
   /**
    * Match#raw -> String
    *
    * Matched string.
    **/
-  this.raw = text
+  this.raw = raw
   /**
    * Match#text -> String
    *
    * Notmalized text of matched string.
    **/
-  this.text = text
+  this.text = raw
   /**
    * Match#url -> String
    *
    * Normalized url of matched string.
    **/
-  this.url = text
-}
-
-function createMatch (self, shift) {
-  const match = new Match(self, shift)
-
-  self.__compiled__[match.schema].normalize(match, self)
-
-  return match
+  this.url = raw
 }
 
 /**
@@ -42841,12 +42966,6 @@ function LinkifyIt (schemas, options) {
 
   this.__opts__ = linkify_it_assign({}, defaultOptions, options)
 
-  // Cache last tested result. Used to skip repeating steps on next `match` call.
-  this.__index__ = -1
-  this.__last_index__ = -1 // Next scan position
-  this.__schema__ = ''
-  this.__text_cache__ = ''
-
   this.__schemas__ = linkify_it_assign({}, defaultSchemas, schemas)
   this.__compiled__ = {}
 
@@ -42888,69 +43007,38 @@ LinkifyIt.prototype.set = function set (options) {
  * Searches linkifiable pattern and returns `true` on success or `false` on fail.
  **/
 LinkifyIt.prototype.test = function test (text) {
-  // Reset scan cache
-  this.__text_cache__ = text
-  this.__index__ = -1
-
   if (!text.length) { return false }
 
-  let m, ml, me, len, shift, next, re, tld_pos, at_pos
+  let m, re
 
   // try to scan for link with schema - that's the most simple rule
   if (this.re.schema_test.test(text)) {
     re = this.re.schema_search
     re.lastIndex = 0
     while ((m = re.exec(text)) !== null) {
-      len = this.testSchemaAt(text, m[2], re.lastIndex)
-      if (len) {
-        this.__schema__ = m[2]
-        this.__index__ = m.index + m[1].length
-        this.__last_index__ = m.index + m[0].length + len
-        break
-      }
+      if (this.testSchemaAt(text, m[2], re.lastIndex)) { return true }
     }
   }
 
   if (this.__opts__.fuzzyLink && this.__compiled__['http:']) {
     // guess schemaless links
-    tld_pos = text.search(this.re.host_fuzzy_test)
-    if (tld_pos >= 0) {
-      // if tld is located after found link - no need to check fuzzy pattern
-      if (this.__index__ < 0 || tld_pos < this.__index__) {
-        if ((ml = text.match(this.__opts__.fuzzyIP ? this.re.link_fuzzy : this.re.link_no_ip_fuzzy)) !== null) {
-          shift = ml.index + ml[1].length
-
-          if (this.__index__ < 0 || shift < this.__index__) {
-            this.__schema__ = ''
-            this.__index__ = shift
-            this.__last_index__ = ml.index + ml[0].length
-          }
-        }
+    if (text.search(this.re.host_fuzzy_test) >= 0) {
+      if (text.match(this.__opts__.fuzzyIP ? this.re.link_fuzzy : this.re.link_no_ip_fuzzy) !== null) {
+        return true
       }
     }
   }
 
   if (this.__opts__.fuzzyEmail && this.__compiled__['mailto:']) {
     // guess schemaless emails
-    at_pos = text.indexOf('@')
-    if (at_pos >= 0) {
+    if (text.indexOf('@') >= 0) {
       // We can't skip this check, because this cases are possible:
       // 192.168.1.1@gmail.com, my.in@example.com
-      if ((me = text.match(this.re.email_fuzzy)) !== null) {
-        shift = me.index + me[1].length
-        next = me.index + me[0].length
-
-        if (this.__index__ < 0 || shift < this.__index__ ||
-            (shift === this.__index__ && next > this.__last_index__)) {
-          this.__schema__ = 'mailto:'
-          this.__index__ = shift
-          this.__last_index__ = next
-        }
-      }
+      if (text.match(this.re.email_fuzzy) !== null) { return true }
     }
   }
 
-  return this.__index__ >= 0
+  return false
 }
 
 /**
@@ -42999,23 +43087,88 @@ LinkifyIt.prototype.testSchemaAt = function testSchemaAt (text, schema, pos) {
  **/
 LinkifyIt.prototype.match = function match (text) {
   const result = []
-  let shift = 0
+  const type_schemed = []
+  const type_fuzzy_link = []
+  const type_fuzzy_email = []
+  let m, len, re
 
-  // Try to take previous element from cache, if .test() called before
-  if (this.__index__ >= 0 && this.__text_cache__ === text) {
-    result.push(createMatch(this, shift))
-    shift = this.__last_index__
+  function choose (a, b) {
+    if (!a) { return b }
+    if (!b) { return a }
+    if (a.index !== b.index) { return a.index < b.index ? a : b }
+    return a.lastIndex >= b.lastIndex ? a : b
   }
 
-  // Cut head if cache was used
-  let tail = shift ? text.slice(shift) : text
+  if (!text.length) { return null }
 
-  // Scan string until end reached
-  while (this.test(tail)) {
-    result.push(createMatch(this, shift))
+  // scan for links with schema
+  if (this.re.schema_test.test(text)) {
+    re = this.re.schema_search
+    re.lastIndex = 0
+    while ((m = re.exec(text)) !== null) {
+      len = this.testSchemaAt(text, m[2], re.lastIndex)
+      if (len) {
+        type_schemed.push({
+          schema: m[2],
+          index: m.index + m[1].length,
+          lastIndex: m.index + m[0].length + len
+        })
+      }
+    }
+  }
 
-    tail = tail.slice(this.__last_index__)
-    shift += this.__last_index__
+  if (this.__opts__.fuzzyLink && this.__compiled__['http:']) {
+    re = this.__opts__.fuzzyIP ? this.re.link_fuzzy_global : this.re.link_no_ip_fuzzy_global
+    re.lastIndex = 0
+    while ((m = re.exec(text)) !== null) {
+      type_fuzzy_link.push({
+        schema: '',
+        index: m.index + m[1].length,
+        lastIndex: m.index + m[0].length
+      })
+    }
+  }
+
+  if (this.__opts__.fuzzyEmail && this.__compiled__['mailto:']) {
+    re = this.re.email_fuzzy_global
+    re.lastIndex = 0
+    while ((m = re.exec(text)) !== null) {
+      type_fuzzy_email.push({
+        schema: 'mailto:',
+        index: m.index + m[1].length,
+        lastIndex: m.index + m[0].length
+      })
+    }
+  }
+
+  const indexes = [0, 0, 0]
+  let lastIndex = 0
+
+  for (;;) {
+    const candidates = [
+      type_schemed[indexes[0]],
+      type_fuzzy_email[indexes[1]],
+      type_fuzzy_link[indexes[2]]
+    ]
+
+    const candidate = choose(choose(candidates[0], candidates[1]), candidates[2])
+
+    if (!candidate) { break }
+
+    if (candidate === candidates[0]) {
+      indexes[0]++
+    } else if (candidate === candidates[1]) {
+      indexes[1]++
+    } else {
+      indexes[2]++
+    }
+
+    if (candidate.index < lastIndex) { continue }
+
+    const match = new Match(text, candidate.schema, candidate.index, candidate.lastIndex)
+    this.__compiled__[match.schema].normalize(match, this)
+    result.push(match)
+    lastIndex = candidate.lastIndex
   }
 
   if (result.length) {
@@ -43032,10 +43185,6 @@ LinkifyIt.prototype.match = function match (text) {
  * of the string, and null otherwise.
  **/
 LinkifyIt.prototype.matchAtStart = function matchAtStart (text) {
-  // Reset scan cache
-  this.__text_cache__ = text
-  this.__index__ = -1
-
   if (!text.length) return null
 
   const m = this.re.schema_at_start.exec(text)
@@ -43044,11 +43193,10 @@ LinkifyIt.prototype.matchAtStart = function matchAtStart (text) {
   const len = this.testSchemaAt(text, m[2], m[0].length)
   if (!len) return null
 
-  this.__schema__ = m[2]
-  this.__index__ = m.index + m[1].length
-  this.__last_index__ = m.index + m[0].length + len
+  const match = new Match(text, m[2], m.index + m[1].length, m.index + m[0].length + len)
 
-  return createMatch(this, 0)
+  this.__compiled__[match.schema].normalize(match, this)
+  return match
 }
 
 /** chainable
@@ -43096,10 +43244,10 @@ LinkifyIt.prototype.normalize = function normalize (match) {
   // Do minimal possible changes by default. Need to collect feedback prior
   // to move forward https://github.com/markdown-it/linkify-it/issues/1
 
-  if (!match.schema) { match.url = 'http://' + match.url }
+  if (!match.schema) { match.url = `http://${match.url}` }
 
   if (match.schema === 'mailto:' && !/^mailto:/i.test(match.url)) {
-    match.url = 'mailto:' + match.url
+    match.url = `mailto:${match.url}`
   }
 }
 
@@ -43681,7 +43829,7 @@ function MarkdownIt (presetName, options) {
  * ```javascript
  * var md = require('markdown-it')()
  *             .set({ html: true, breaks: true })
- *             .set({ typographer, true });
+ *             .set({ typographer: true });
  * ```
  *
  * __Note:__ To achieve the best possible performance, don't modify a
@@ -43989,7 +44137,6 @@ async function run() {
  * The entrypoint for the action.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 run();
 
 
