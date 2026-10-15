@@ -1,15 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "autoApprove": true,
-  "extends": ["github>bcgov/renovate-config"],
-  "pinDigest": {
-    "groupName": "Pin Dependencies",
-    "groupSlug": "pin-dependencies",
-    "commitMessageAction": "Pin",
-    "group": {
-      "commitMessageTopic": "dependencies",
-      "commitMessageExtra": ""
-    }
-  }
+  "extends": ["github>bcgov/renovate-config#2026.9.26"]
 }

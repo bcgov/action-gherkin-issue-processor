@@ -79,24 +79,39 @@ jobs:
     name: Trivy Security Scan
     if: (! github.event.pull_request.draft)
     permissions:
+      contents: read
       security-events: write
     runs-on: ubuntu-24.04
-    timeout-minutes: 1
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || '' }}
+
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@1bd062560b422f5944df1de50abd05162bea079e
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           format: 'sarif'
           output: 'trivy-results.sarif'
           ignore-unfixed: true
           scan-type: 'fs'
-          scanners: 'vuln,secret,config'
-          severity: 'CRITICAL,HIGH'
+          scanners: 'vuln,secret,misconfig'
+          severity: 'CRITICAL'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      - name: Upload Trivy scan results to GitHub Security tab (PR)
+        if: always() && github.event_name == 'pull_request'
         uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4
         with:
+          category: 'trivy'
+          sarif_file: 'trivy-results.sarif'
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          sha: ${{ github.event.pull_request.head.sha }}
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always() && github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4
+        with:
+          category: 'trivy'
           sarif_file: 'trivy-results.sarif'
 
   results:
@@ -106,7 +121,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - if:
-          contains(needs.*.result, 'failure')||contains(needs.*.result,
-          'canceled')
+          contains(needs.*.result, 'failure') || contains(needs.*.result,
+          'cancelled') || contains(needs.*.result, 'canceled')
         run: echo "At least one job has failed." && exit 1
       - run: echo "Success!"

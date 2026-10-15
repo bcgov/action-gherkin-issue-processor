@@ -3,16 +3,6 @@ name: Test and Release
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '.github/sample.feature'
-      - '**.md'
-      - 'badges/**'
-      - '.eslintignore'
-      - '.github/linters/**'
-      - '.gitignore'
-      - '.gitattributes'
-      - '.prettier*'
-      - 'renovate.json'
   workflow_dispatch:
 
 concurrency:
@@ -34,7 +24,7 @@ jobs:
       - name: Get Semver
         id: semver
         continue-on-error: true
-        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8
+        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
         with:
           token: ${{ github.token }}
 
@@ -63,7 +53,7 @@ jobs:
           git tag -f ${{ env.tag }}
           git push -f origin tag ${{ env.tag }}
 
-          if [ $(gh release view ${{ env.tag }} --json name -q .name) ]; then
+          if [ "$(gh release view ${{ env.tag }} --json name -q .name)" ]; then
             gh release edit ${{ env.tag }} --title ${{ env.tag }} --tag ${{ env.tag }}
           else
             gh release create ${{ env.tag }} --title ${{ env.tag }} --generate-notes
@@ -78,7 +68,7 @@ jobs:
           git tag ${{ env.tag }}
           git push origin tag ${{ env.tag }}
 
-          if [ $(gh release view ${{ env.tag }} --json name -q .name) ]; then
+          if [ "$(gh release view ${{ env.tag }} --json name -q .name)" ]; then
             gh release delete ${{ env.tag }} --yes
           fi
           gh release create ${{ env.tag }} --title ${{ env.tag }} --generate-notes
