@@ -12,9 +12,48 @@ permissions:
   security-events: write
 
 jobs:
+  changes:
+    name: Detect Changes
+    if: (! github.event.pull_request.draft)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    permissions:
+      contents: read
+    outputs:
+      triggered: ${{ steps.result.outputs.triggered }}
+    steps:
+      - name: Check triggers
+        if: github.event_name == 'pull_request'
+        uses: bcgov/actions/diff-triggers@79aefe3a7abb2d0d00b1b3ea4cfbf12727a10638 # v0.9.0
+        id: diff
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          triggers: |
+            .github/linters/
+            .github/sample.feature
+            .github/workflows/analysis.yml
+            .node-version
+            .prettierignore
+            .prettierrc.json
+            __tests__/
+            action.yml
+            package-lock.json
+            package.json
+            src/
+            tsconfig.json
+            vitest.config.ts
+      - id: result
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "triggered=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "triggered=${{ steps.diff.outputs.triggered }}" >> "$GITHUB_OUTPUT"
+          fi
+
   test-action:
     name: GitHub Actions Test
-    if: (! github.event.pull_request.draft)
+    needs: [changes]
+    if: needs.changes.outputs.triggered == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -52,7 +91,8 @@ jobs:
 
   test-typescript:
     name: TypeScript Tests
-    if: (! github.event.pull_request.draft)
+    needs: [changes]
+    if: needs.changes.outputs.triggered == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -117,7 +157,7 @@ jobs:
 
   results:
     name: Analysis Results
-    needs: [test-action, test-typescript, trivy]
+    needs: [changes, test-action, test-typescript, trivy]
     if: always() && (! github.event.pull_request.draft)
     runs-on: ubuntu-24.04
     steps:

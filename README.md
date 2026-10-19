@@ -66,7 +66,7 @@ optional and usually have default values.
 # Usage
 
 ```yaml
-- uses: bcgov/action-gherkin-issue-processor@main
+- uses: bcgov/action-gherkin-issue-processor@fa2d4ede01ad5c6034cc90180a5cafa8000aac79 # v1.1.4
   with:
     ### Required
 
@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov/action-gherkin-issue-processor@main
+        uses: bcgov/action-gherkin-issue-processor@fa2d4ede01ad5c6034cc90180a5cafa8000aac79 # v1.1.4
         with:
           issue: ${{ github.event.issue.number }}
       - name: Save feature content
@@ -121,7 +121,7 @@ jobs:
     steps:
       - name: Extract feature content
         id: feature
-        uses: bcgov/action-gherkin-issue-processor@main
+        uses: bcgov/action-gherkin-issue-processor@fa2d4ede01ad5c6034cc90180a5cafa8000aac79 # v1.1.4
         with:
           issue: ${{ github.event.issue.number }}
           owner: ${{ github.repository_owner }}
