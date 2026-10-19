@@ -7,18 +7,18 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+permissions: {}
 
 jobs:
-  publish:
-    name: Publish
-    env:
-      branch: temp-${{ github.run_number }}
+  build:
+    name: Build Release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-      actions: write
-      attestations: write
+    outputs:
+      tag: ${{ steps.semver.outputs.next }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Get Semver
@@ -28,56 +28,128 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Git Setup
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         if: steps.semver.outputs.next
-        run: |
-          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git config --global user.name "${GITHUB_ACTOR}"
-          git checkout -b ${{ env.branch }}
+        with:
+          node-version-file: .node-version
+          cache: npm
 
-      - name: Rebuild ./dist
+      - name: Build dist on the release commit and tag it
         if: steps.semver.outputs.next
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.semver.outputs.next }}
         run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null; then
+            echo "tag ${TAG} already exists; refusing to overwrite it" >&2
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release ${TAG} already exists; refusing to overwrite it" >&2
+            exit 1
+          fi
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config user.name "${GITHUB_ACTOR}"
           npm ci
           npm run bundle
-          git add ./dist --force
+          if [ ! -f dist/index.js ]; then
+            echo "dist/index.js is missing after the build" >&2
+            exit 1
+          fi
+          # dist/ is git-ignored on main, so it is force-added to the release commit
+          git add -f -A -- dist
           git commit -m "Rebuild dist/ directory"
-          git push -u origin HEAD:${{ env.branch }}
+          git tag "$TAG"
+          # The tag is pushed here, so it exists while the release is still a draft
+          git push origin "refs/tags/${TAG}"
+          # Draft until the smoke test passes; the Publish job publishes it and moves the major tag
+          gh release create "$TAG" --title "$TAG" --generate-notes --draft --verify-tag
 
-      - name: Tag and Release (Major)
-        if: steps.semver.outputs.next
+  smoke:
+    name: Smoke Test
+    needs: [build]
+    if: needs.build.outputs.tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # The tag as consumers get it: committed dist/, no npm install, no build
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+
+      - name: Check the tag commit carries dist/
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! git ls-files --error-unmatch dist/index.js >/dev/null 2>&1; then
+            echo "tag ${TAG} has no committed dist/index.js" >&2
+            exit 1
+          fi
+          sha=$(git rev-parse HEAD)
+          echo "Smoke testing ${TAG} at ${sha}"
+          echo "Consumers pin \`bcgov/action-gherkin-issue-processor@${sha} # ${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the action from the tag
+        id: action
+        uses: ./
+        with:
+          issue: 1
+
+      - name: Validate Feature
+        env:
+          FEATURE: ${{ steps.action.outputs.feature }}
+        run: |
+          echo "$FEATURE" > .github/ci.feature
+          diff .github/ci.feature .github/sample.feature
+
+      - name: Report the failed gate
+        if: failure()
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          msg="Smoke test failed for ${TAG}. The release stays a draft and the major tag was not moved. Fix and push again, or delete the draft release and the ${TAG} tag."
+          echo "::error::${msg}"
+          echo "### :x: ${msg}" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Publish
+    needs: [build, smoke]
+    if: needs.build.outputs.tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+
+      - name: Publish the draft and move the major tag
         env:
           GH_TOKEN: ${{ github.token }}
-          tag: ${{ steps.semver.outputs.nextMajor }}
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          git tag -f ${{ env.tag }}
-          git push -f origin tag ${{ env.tag }}
-
-          if [ "$(gh release view ${{ env.tag }} --json name -q .name)" ]; then
-            gh release edit ${{ env.tag }} --title ${{ env.tag }} --tag ${{ env.tag }}
+          set -euo pipefail
+          if [ "$(gh release view "$TAG" --json isDraft -q .isDraft)" != "true" ]; then
+            echo "release ${TAG} is not a draft; refusing to republish it" >&2
+            exit 1
+          fi
+          gh release edit "$TAG" --draft=false
+          echo "Published ${TAG} after the smoke test passed" >> "$GITHUB_STEP_SUMMARY"
+          major="${TAG%%.*}"
+          if [[ ! "$major" =~ ^v[0-9]+$ ]]; then
+            echo "cannot derive a major tag from ${TAG}" >&2
+            exit 1
+          fi
+          git tag -f "$major"
+          git push -f origin "refs/tags/${major}"
+          if gh release view "$major" >/dev/null 2>&1; then
+            gh release edit "$major" --title "$major" --tag "$major"
           else
-            gh release create ${{ env.tag }} --title ${{ env.tag }} --generate-notes
+            gh release create "$major" --title "$major" --generate-notes --latest=false
           fi
-
-      - name: Tag and Release (Semver)
-        if: steps.semver.outputs.next
-        env:
-          GH_TOKEN: ${{ github.token }}
-          tag: ${{ steps.semver.outputs.next }}
-        run: |
-          git tag ${{ env.tag }}
-          git push origin tag ${{ env.tag }}
-
-          if [ "$(gh release view ${{ env.tag }} --json name -q .name)" ]; then
-            gh release delete ${{ env.tag }} --yes
-          fi
-          gh release create ${{ env.tag }} --title ${{ env.tag }} --generate-notes
-
-      - name: Cleanup
-        if: always()
-        run: |
-          if [ "$(git ls-remote origin ${{ env.branch }})" ]; then
-            git push --delete origin ${{ env.branch }}
-          else
-            echo "Cleanup not required"
-          fi
+          echo "Moved ${major} to ${TAG}" >> "$GITHUB_STEP_SUMMARY"
