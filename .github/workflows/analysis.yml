@@ -27,7 +27,6 @@ jobs:
         uses: bcgov/actions/diff-triggers@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
         id: diff
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           triggers: |
             .github/linters/
             .github/sample.feature
