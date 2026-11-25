@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Check triggers
         if: github.event_name == 'pull_request'
-        uses: bcgov/actions/diff-triggers@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
+        uses: bcgov/actions/diff-triggers@6c8ac0469fcf0d826533bc526c90119b8f149884 # v0.13.0
         id: diff
         with:
           triggers: |
@@ -160,6 +160,6 @@ jobs:
     if: always() && (! github.event.pull_request.draft)
     runs-on: ubuntu-26.04
     steps:
-      - uses: bcgov/actions/workflow-results@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
+      - uses: bcgov/actions/workflow-results@6c8ac0469fcf0d826533bc526c90119b8f149884 # v0.13.0
         with:
           needs: ${{ toJson(needs) }}
